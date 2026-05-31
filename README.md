@@ -15,16 +15,6 @@ Open `index.html` in a browser.
 
 No install or dependencies required.
 
-## Publish on GitHub Pages
-
-1. Create a new GitHub repository.
-2. Upload/push these files.
-3. In the repo settings, open **Pages**.
-4. Set source to **Deploy from a branch**.
-5. Select branch `main` and folder `/ (root)`.
-6. Save and wait for deployment.
-7. Share the generated Pages URL.
-
 ## Notes
 
 - One reroll costs **200 gems**.
