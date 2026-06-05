@@ -1,0 +1,1311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Archaeology Calculator</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel2: #1f2430;
+      --text: #e8ecf1;
+      --muted: #a8b0be;
+      --border: #2e3443;
+      --accent: #78a6ff;
+      --bad: #ff8a8a;
+      --good: #8cffb0;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Roboto, sans-serif;
+      line-height: 1.4;
+    }
+    .wrap { max-width: 1400px; margin: 24px auto; padding: 0 16px 40px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    h1 { margin: 0 0 6px; font-size: 1.4rem; }
+    .sub { margin: 0 0 4px; color: var(--muted); font-size: 0.92rem; }
+    h2 { margin: 0 0 8px; font-size: 1rem; }
+    h3 { margin: 0 0 8px; font-size: 0.95rem; color: var(--accent); }
+    .panel {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .tool-panel {
+      border-color: rgba(120, 166, 255, 0.35);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .upgrades-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 1100px) {
+      .upgrades-grid { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .upgrades-grid { grid-template-columns: 1fr; }
+    }
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .input-block label {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+    .input-block input.lvl,
+    .input-block input.scalar {
+      width: 70px;
+      background: #141925;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.95rem;
+      text-align: right;
+    }
+    .lvl-controls .lvl,
+    .lvl-controls .scalar {
+      width: 70px;
+      margin: 0;
+      background: #141925;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.95rem;
+      text-align: right;
+    }
+    .lvl-controls .scalar { width: 88px; }
+    .lvl.invalid {
+      border-color: var(--bad);
+      box-shadow: 0 0 0 2px rgba(255, 138, 138, 0.2);
+    }
+    .lvl-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: #1c2332;
+      color: var(--text);
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .fragment-target-row { margin-top: 12px; }
+    .fragment-target-label {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    .fragment-choices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .fragment-choice {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #141925;
+      cursor: pointer;
+      font-size: 0.9rem;
+      user-select: none;
+    }
+    .fragment-choice:has(input:checked) {
+      border-color: var(--accent);
+      background: #1a2540;
+    }
+    .fragment-choice.out-of-bounds {
+      opacity: 0.42;
+      cursor: not-allowed;
+      filter: saturate(0.35) brightness(0.9);
+    }
+    .fragment-choice.out-of-bounds:has(input:checked) {
+      border-color: var(--border);
+      background: #141925;
+    }
+    .fragment-choice input { accent-color: var(--accent); margin: 0; }
+    .fragment-bounds-note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      max-width: 52rem;
+    }
+    .btn-primary {
+      background: #2a3f66;
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn-step {
+      padding: 6px 8px;
+      min-width: 2.2rem;
+      font-size: 0.82rem;
+    }
+    .upgrade {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      background: rgba(0, 0, 0, 0.12);
+    }
+    .upgrade:last-child { margin-bottom: 0; }
+    .upgrade.locked {
+      background: rgba(0, 0, 0, 0.35);
+      border-color: rgba(46, 52, 67, 0.95);
+      filter: saturate(0.35) brightness(0.82);
+    }
+    .upgrade.locked .benefit-line {
+      color: #8a93a8;
+    }
+    .upgrade.locked .meta {
+      color: #6d7588;
+    }
+    .upgrade.locked .lvl-controls input.lvl,
+    .upgrade.locked .lvl-controls .btn-step,
+    .upgrade input.lvl.locked,
+    .upgrade .btn-step.locked {
+      background: #1e2433 !important;
+      color: #6e788c !important;
+      border-color: #3a4254 !important;
+      opacity: 1;
+      cursor: not-allowed;
+      -webkit-text-fill-color: #6e788c;
+    }
+    .upgrades-grid > .panel.tier-locked > h3 {
+      color: #6d7588;
+    }
+    .stat-slot.locked .benefit-line {
+      color: #8a93a8;
+    }
+    .stat-slot.locked .meta {
+      color: #6d7588;
+    }
+    .stat-slot.locked {
+      background: rgba(0, 0, 0, 0.35);
+      border-color: rgba(46, 52, 67, 0.95);
+      filter: saturate(0.35) brightness(0.82);
+    }
+    .stat-slot.locked .lvl-controls input.lvl,
+    .stat-slot.locked .lvl-controls .btn-step,
+    .stat-slot input.lvl.locked,
+    .stat-slot .btn-step.locked {
+      background: #1e2433 !important;
+      color: #6e788c !important;
+      border-color: #3a4254 !important;
+      opacity: 1;
+      cursor: not-allowed;
+      -webkit-text-fill-color: #6e788c;
+    }
+    .upgrade-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .benefit-list { min-width: 0; flex: 1; }
+    .benefit-line { display: block; font-size: 0.92rem; }
+    .meta { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+    .stat-levels-layout {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: flex-start;
+      gap: 16px;
+      width: 100%;
+    }
+    .stat-levels-main {
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+    .build-report-panel {
+      flex: 1 1 0;
+      min-width: 280px;
+      max-width: none;
+      margin-left: auto;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .build-report-panel h4 {
+      margin: 0 0 8px;
+      font-size: 0.92rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    #build-report {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 10px;
+      row-gap: 2px;
+      align-items: baseline;
+      font-size: 0.86rem;
+    }
+    .report-k {
+      color: var(--muted);
+      padding: 2px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+    }
+    .report-v {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      padding: 2px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+    }
+    .report-section {
+      grid-column: 1 / -1;
+      margin-top: 8px;
+      padding-top: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .report-section-v { display: none; }
+    .report-indent {
+      padding-left: 10px;
+      font-size: 0.8rem;
+    }
+    .grid > .panel:has(.stat-levels-layout) {
+      width: 100%;
+      max-width: 100%;
+    }
+    @media (max-width: 720px) {
+      .stat-levels-layout {
+        flex-wrap: wrap;
+      }
+      .build-report-panel {
+        flex: 1 1 100%;
+        margin-left: 0;
+      }
+    }
+    #statInputs {
+      display: grid;
+      grid-template-columns: 9.5rem max-content;
+      column-gap: 14px;
+      row-gap: 8px;
+      align-items: center;
+      justify-content: start;
+      width: max-content;
+      max-width: 100%;
+    }
+    .stat-slot {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: subgrid;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.12);
+    }
+    .stat-slot .upgrade-top {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: subgrid;
+      align-items: center;
+    }
+    .stat-slot .benefit-list {
+      grid-column: 1;
+      min-width: 0;
+    }
+    .stat-slot .lvl-controls {
+      grid-column: 2;
+      justify-self: start;
+    }
+    @supports not (grid-template-columns: subgrid) {
+      #statInputs {
+        display: block;
+      }
+      .stat-slot {
+        display: block;
+        margin-bottom: 8px;
+      }
+      .stat-slot:last-child {
+        margin-bottom: 0;
+      }
+      .stat-slot .upgrade-top {
+        grid-column: auto;
+        grid-template-columns: 9.5rem max-content;
+      }
+      .stat-slot .benefit-list,
+      .stat-slot .lvl-controls {
+        grid-column: auto;
+      }
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 4px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+      font-size: 0.92rem;
+    }
+    .row:last-child { border-bottom: 0; }
+    .row.rec-diff { color: var(--good); }
+    .k { color: var(--muted); }
+    .status, .push-status {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      white-space: pre-line;
+    }
+    .status.bad, .push-status.bad { color: var(--bad); }
+    .status.good, .push-status.good { color: var(--good); }
+    .note { margin-top: 8px; color: var(--muted); font-size: 0.88rem; }
+    .results-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin: 10px 0;
+    }
+    .metric strong {
+      display: block;
+      font-size: 1.35rem;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .metric span { color: var(--muted); font-size: 0.88rem; }
+    .hist-pre {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: pre-wrap;
+      margin: 0;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+    .checkbox-row input { width: auto; }
+    .cards-section { margin-top: 14px; }
+    .cards-section h3 { margin-bottom: 6px; }
+    .cards-note { color: var(--muted); font-size: 0.88rem; margin: 0 0 8px; }
+    .cards-table {
+      width: 100%;
+      max-width: 520px;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .cards-table th,
+    .cards-table td {
+      border: 1px solid var(--border);
+      padding: 4px 6px;
+      text-align: center;
+    }
+    .cards-table th:first-child { text-align: left; }
+    .card-select {
+      width: 100%;
+      min-width: 4.5rem;
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-size: 0.85rem;
+    }
+    .misc-card-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    .cards-fill-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .cards-fill-label { color: var(--muted); font-size: 0.88rem; }
+    #card-tier-hint { margin: 0 0 8px; font-size: 0.88rem; color: var(--accent); }
+    .note.warn { color: var(--bad); }
+
+    .abilities-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+      margin-top: 10px;
+      font-size: 0.92rem;
+    }
+    .abilities-label { color: var(--muted); }
+    .checkbox-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .checkbox-inline input { width: auto; }
+    .hidden { display: none !important; }
+    #budget-line.over { color: var(--bad); }
+    #load-error {
+      color: var(--bad);
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid var(--bad);
+      border-radius: 8px;
+      background: rgba(255, 138, 138, 0.08);
+    }
+    .recommended-box {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(120, 166, 255, 0.06);
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Archaeology Calculator</h1>
+      <p class="sub">Your build auto-saves in this browser (stats, upgrades, level, settings). Use <strong>Export build</strong> to keep a file copy when testing code changes or moving folders. Works as a file or on a website — include <code>js/archaeology-bundle.js</code> and <code>js/mc-worker.js</code>.</p>
+    </header>
+
+    <p id="load-error" class="hidden"></p>
+
+    <section class="card" id="section-build">
+      <h2>Your build</h2>
+      <p id="build-save-status" class="note">Build auto-saves in this browser when you change any value.</p>
+      <div class="controls-row">
+        <button type="button" class="btn" id="btn-export-build">Export build (.json)</button>
+        <button type="button" class="btn" id="btn-import-build">Import build…</button>
+        <input type="file" id="import-build-file" accept=".json,application/json" hidden />
+      </div>
+
+      <div class="controls-row">
+        <div class="input-block">
+          <label for="arch-level">Archaeology level</label>
+          <input id="arch-level" class="scalar" type="number" min="1" step="1" value="1" />
+        </div>
+        <div class="input-block">
+          <label for="ascension">Ascension</label>
+          <input id="ascension" class="scalar" type="number" min="0" max="2" step="1" value="0" />
+        </div>
+        <div class="input-block">
+          <label for="highest-stage">Highest stage</label>
+          <input id="highest-stage" class="scalar" type="number" min="1" step="1" value="1" />
+        </div>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="bonker" />
+        Block Bonker owned
+      </label>
+
+      <div class="abilities-row">
+        <span class="abilities-label">Use in sim:</span>
+        <label class="checkbox-inline"><input type="checkbox" id="ability-enrage" checked /> Enrage</label>
+        <label class="checkbox-inline"><input type="checkbox" id="ability-flurry" checked /> Flurry</label>
+        <label class="checkbox-inline"><input type="checkbox" id="ability-quake" checked /> Quake</label>
+      </div>
+
+      <div class="cards-section" id="section-cards">
+        <h3>Block cards</h3>
+        <p class="cards-note">One card per block type and tier (T1–T4), including <strong>dirt</strong> (no fragment drops, same −HP / +XP buffs). Pick your <strong>highest</strong> quality only — Gilded replaces Normal, Polychrome replaces Gilded (bonuses do not stack). Buffs apply when the spawned block’s <strong>tier column</strong> matches (see hint below).</p>
+        <p id="card-tier-hint" class="cards-note"></p>
+        <div id="block-cards-grid"></div>
+        <div id="misc-card-wrap"></div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <h3>Stat levels</h3>
+          <p id="budget-line" class="note">Stat points: 0 / 1</p>
+          <div class="stat-levels-layout">
+          <div class="stat-levels-main">
+          <div id="statInputs">
+            <div class="stat-slot" data-stat-id="strength" data-unlock-ascension="0">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Strength</span>
+                  <div class="meta">Cap: 50</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-strength" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-slot" data-stat-id="agility" data-unlock-ascension="0">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Agility</span>
+                  <div class="meta">Cap: 50</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-agility" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-slot" data-stat-id="perception" data-unlock-ascension="0">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Perception</span>
+                  <div class="meta">Cap: 25</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-perception" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-slot" data-stat-id="intellect" data-unlock-ascension="0">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Intellect</span>
+                  <div class="meta">Cap: 25</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-intellect" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-slot" data-stat-id="luck" data-unlock-ascension="0">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Luck</span>
+                  <div class="meta">Cap: 25</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-luck" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-slot" data-stat-id="divinity" data-unlock-ascension="1">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Divinity</span>
+                  <div class="meta">Cap: 10</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-divinity" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+            <div class="stat-slot" data-stat-id="corruption" data-unlock-ascension="2">
+              <div class="upgrade-top">
+                <div class="benefit-list">
+                  <span class="benefit-line">Corruption</span>
+                  <div class="meta">Cap: 10</div>
+                </div>
+                <div class="lvl-controls">
+                  <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                  <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                  <input class="lvl" type="number" min="0" step="1" id="stat-corruption" value="0" />
+                  <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                  <button type="button" class="btn btn-step" data-delta="5">+5</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn" id="btn-reset-stats" style="margin-top:8px">Reset stats to 0</button>
+          </div>
+          <aside class="build-report-panel" aria-labelledby="build-report-heading">
+            <h4 id="build-report-heading">Combat stats</h4>
+            <div id="build-report"></div>
+          </aside>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:16px">Fragment &amp; gem upgrades</h3>
+      <div class="upgrades-grid">
+        <div class="panel">
+          <h3>Gem</h3>
+          <div id="gemUpgrades">
+          <div class="upgrade" data-tier="gem" data-upgrade-id="gem_stamina_and_stamina_mod">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2 max stamina, +0.5% stam mod chance</span>
+                <div class="meta">Cap: 5 (max 50)</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_gem_stamina_and_stamina_mod" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="gem" data-upgrade-id="gem_exp_and_exp_mod">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+5% archaeology XP, +0.05% exp mod chance</span>
+                <div class="meta">Cap: 5 (max 25)</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_gem_exp_and_exp_mod" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="gem" data-upgrade-id="gem_fragment_and_loot_mod">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2% fragments, +0.05% loot mod chance</span>
+                <div class="meta">Cap: 5 (max 25)</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_gem_fragment_and_loot_mod" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="panel">
+          <h3>Common</h3>
+          <div id="commonUpgrades">
+<div class="upgrade" data-tier="common" data-upgrade-id="flat_damage" data-unlock-stage="1" data-cap="25">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1 flat damage</span>
+                <div class="meta">Cap: 25</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_flat_damage" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="common" data-upgrade-id="flat_armor_penetration" data-unlock-stage="2" data-cap="25">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1 armor pen</span>
+                <div class="meta">Cap: 25</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_flat_armor_penetration" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="common" data-upgrade-id="archaeology_exp_gain" data-unlock-stage="3" data-cap="25">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2% archaeology XP</span>
+                <div class="meta">Cap: 25</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_archaeology_exp_gain" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="common" data-upgrade-id="crit_chance_and_crit_damage" data-unlock-stage="4" data-cap="25">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.25% crit chance, +1% crit damage</span>
+                <div class="meta">Cap: 25</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_crit_chance_and_crit_damage" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="common" data-upgrade-id="strength_stat_buff" data-unlock-stage="13" data-cap="5">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.2 flat dmg & +0.1% dmg per STR point</span>
+                <div class="meta">Cap: 5</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_strength_stat_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="common" data-upgrade-id="polychrome_archaeology_card_bonus" data-unlock-stage="34" data-cap="1">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+15% polychrome card bonus</span>
+                <div class="meta">Cap: 1</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_polychrome_archaeology_card_bonus" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="panel">
+          <h3>Rare</h3>
+          <div id="rareUpgrades">
+<div class="upgrade" data-tier="rare" data-upgrade-id="max_stamina_and_stamina_mod_chance" data-unlock-stage="5" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2 max stamina, +0.05% stam mod chance</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_max_stamina_and_stamina_mod_chance" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="rare" data-upgrade-id="flat_damage_rare" data-unlock-stage="6" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2 flat damage</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_flat_damage_rare" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="rare" data-upgrade-id="loot_mod_multiplier" data-unlock-stage="6" data-cap="10">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.3× loot mod</span>
+                <div class="meta">Cap: 10</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_loot_mod_multiplier" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="rare" data-upgrade-id="enrage_buff" data-unlock-stage="7" data-cap="15">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2% enrage dmg/crit dmg, -1s cooldown</span>
+                <div class="meta">Cap: 15</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_enrage_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="rare" data-upgrade-id="agility_stat_buff" data-unlock-stage="15" data-cap="5">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1 max stam & +0.02% stam mod per AGI</span>
+                <div class="meta">Cap: 5</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_agility_stat_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="rare" data-upgrade-id="perception_stat_buff" data-unlock-stage="22" data-cap="5">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.01% loot mod & +1% armor pen per PER</span>
+                <div class="meta">Cap: 5</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_perception_stat_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="rare" data-upgrade-id="fragment_gain_multiplier" data-unlock-stage="36" data-cap="1">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">1.25× fragment gain</span>
+                <div class="meta">Cap: 1</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_fragment_gain_multiplier" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="panel">
+          <h3>Epic</h3>
+          <div id="epicUpgrades">
+<div class="upgrade" data-tier="epic" data-upgrade-id="flat_damage_super_crit" data-unlock-stage="9" data-cap="25">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2 flat damage, +0.35% super crit</span>
+                <div class="meta">Cap: 25</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_flat_damage_super_crit" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="epic" data-upgrade-id="exp_and_fragment_gain" data-unlock-stage="10" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+3% XP, +2% fragment gain</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_exp_and_fragment_gain" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="epic" data-upgrade-id="flurry_buff" data-unlock-stage="11" data-cap="10">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1 flurry stamina, -1s cooldown</span>
+                <div class="meta">Cap: 10</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_flurry_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="epic" data-upgrade-id="max_stamina_stamina_mod_gain" data-unlock-stage="12" data-cap="5">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+4 max stamina, +1 stamina mod gain</span>
+                <div class="meta">Cap: 5</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_max_stamina_stamina_mod_gain" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="epic" data-upgrade-id="intellect_stat_buff" data-unlock-stage="24" data-cap="5">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1% XP & +0.01% exp mod per INT</span>
+                <div class="meta">Cap: 5</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_intellect_stat_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="epic" data-upgrade-id="stamina_mod_gain_epic" data-unlock-stage="38" data-cap="1">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2 stamina mod gain</span>
+                <div class="meta">Cap: 1</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_stamina_mod_gain_epic" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="panel">
+          <h3>Legendary</h3>
+          <div id="legendaryUpgrades">
+<div class="upgrade" data-tier="legendary" data-upgrade-id="exp_gain_max_stamina_percent" data-unlock-stage="17" data-cap="15">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+5% XP, +1% max stamina</span>
+                <div class="meta">Cap: 15</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_exp_gain_max_stamina_percent" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="legendary" data-upgrade-id="armor_pen_ability_cooldown" data-unlock-stage="18" data-cap="10">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2% armor pen, -1s ability cooldown</span>
+                <div class="meta">Cap: 10</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_armor_pen_ability_cooldown" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="legendary" data-upgrade-id="crit_and_super_crit_damage" data-unlock-stage="20" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2% crit & super crit damage</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_crit_and_super_crit_damage" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="legendary" data-upgrade-id="quake_buff" data-unlock-stage="20" data-cap="10">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1 quake attack, -2s quake cooldown</span>
+                <div class="meta">Cap: 10</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_quake_buff" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="legendary" data-upgrade-id="all_mod_chances" data-unlock-stage="40" data-cap="1">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+1.5% all mod chances</span>
+                <div class="meta">Cap: 1</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_all_mod_chances" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="panel">
+          <h3>Mythic</h3>
+          <div id="mythicUpgrades">
+<div class="upgrade" data-tier="mythic" data-upgrade-id="damage_percent_flat_armor_pen" data-unlock-stage="26" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+2% damage, +3 armor pen</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_damage_percent_flat_armor_pen" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="mythic" data-upgrade-id="super_crit_ultra_crit_chance" data-unlock-stage="28" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.35% super crit, +1% ultra crit</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_super_crit_ultra_crit_chance" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="mythic" data-upgrade-id="exp_mod_gain_and_chance" data-unlock-stage="30" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.1× exp mod, +0.1% exp mod chance</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_exp_mod_gain_and_chance" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="mythic" data-upgrade-id="instacharge_max_stamina_per_hit" data-unlock-stage="32" data-cap="20">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">+0.3% instacharge, +4 max stam/hit</span>
+                <div class="meta">Cap: 20</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_instacharge_max_stamina_per_hit" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+          <div class="upgrade" data-tier="mythic" data-upgrade-id="exp_gain_2x_stat_caps" data-unlock-stage="42" data-cap="1">
+            <div class="upgrade-top">
+              <div class="benefit-list">
+                <span class="benefit-line">2× XP, +5 all stat caps</span>
+                <div class="meta">Cap: 1</div>
+              </div>
+              <div class="lvl-controls">
+                <button type="button" class="btn btn-step" data-delta="-5">−5</button>
+                <button type="button" class="btn btn-step" data-delta="-1">−1</button>
+                <input class="lvl" type="number" min="0" step="1" id="lvl_exp_gain_2x_stat_caps" value="0" />
+                <button type="button" class="btn btn-step" data-delta="1">+1</button>
+                <button type="button" class="btn btn-step" data-delta="5">+5</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card tool-panel" id="section-push">
+      <h2>Push optimizer</h2>
+      <p class="sub">Uses upgrades and settings from <strong>Your build</strong>. Screens many stat layouts, refines the best, then confirms at full MC trials. Optimizer runs MC in parallel via <code>js/mc-worker.js</code> (uses several CPU cores).</p>
+
+      <div class="controls-row">
+        <div class="input-block">
+          <label for="mc-trials">MC trials</label>
+          <input id="mc-trials" class="scalar" type="number" min="100" max="20000" step="100" value="600" />
+        </div>
+        <button type="button" class="btn" id="btn-preview">Preview your stats</button>
+        <button type="button" class="btn btn-primary" id="btn-optimize">Optimize stats</button>
+      </div>
+
+      <div id="recommended-stats" class="recommended-box hidden">
+        <h3>Recommended stat allocation</h3>
+        <p class="note">Does not change your inputs until you apply.</p>
+        <div id="recommended-stats-body"></div>
+        <button type="button" class="btn btn-primary" id="btn-apply-stats" style="margin-top:10px" disabled>Apply to stat inputs above</button>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h3>Results</h3>
+        <div id="push-results-inner">
+          <p class="note">Preview your current stats, or optimize to see results for recommended stats.</p>
+        </div>
+      </div>
+
+      <p id="push-status" class="push-status"></p>
+      <p class="note">Push sim: per-slot spawns, spawn-order targeting, rolled crits (incl. super/ultra), block cards, Enrage / Flurry / Quake, partial floors. No block speed mods.</p>
+    </section>
+
+    <section class="card tool-panel" id="section-xp">
+      <h2>XP optimizer</h2>
+      <p class="sub">Uses the same build and <strong>MC trials</strong> as push. Screens many stat layouts with quick MC, refines the best, then confirms at full trials (good when budget ≪ sum of caps). MC screening uses parallel workers like push.</p>
+
+      <div class="controls-row">
+        <button type="button" class="btn" id="btn-xp-preview">Preview XP/hr (your stats)</button>
+        <button type="button" class="btn btn-primary" id="btn-xp-optimize">Optimize stats for XP</button>
+      </div>
+
+      <div id="recommended-stats-xp" class="recommended-box hidden">
+        <h3>Recommended stat allocation (XP)</h3>
+        <p class="note">Does not change your inputs until you apply.</p>
+        <div id="recommended-stats-xp-body"></div>
+        <button type="button" class="btn btn-primary" id="btn-apply-stats-xp" style="margin-top:10px" disabled>Apply to stat inputs above</button>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h3>XP results</h3>
+        <div id="xp-results-inner">
+          <p class="note">Preview your current stats, or optimize to see results for recommended stats.</p>
+        </div>
+      </div>
+
+      <p id="xp-status" class="push-status"></p>
+      <p class="note">XP sim: rolled crits, block cards (tier + dirt), deterministic block mods, flurry speed + stamina, enrage/quake cleave rolls, partial floors. Results show <strong>E[XP/hr]</strong> (mean of per-run rates) and <strong>ratio÷means</strong> (sum XP ÷ sum time — cross-tool compare). Crosshairs / one-hit not simulated.</p>
+    </section>
+
+    <section class="card tool-panel" id="section-fragment">
+      <h2>Fragment optimizer</h2>
+      <p class="sub">Optimize stat allocation for <strong>E[fragments/hour]</strong> of a chosen currency. Uses the same build and <strong>MC trials</strong> as push. Sim starts at stage 1 each run (depth + PER + loot mods matter).</p>
+
+      <div class="fragment-target-row">
+        <span class="fragment-target-label">Target fragment</span>
+        <div class="fragment-choices" id="fragment-choices" role="radiogroup" aria-label="Target fragment currency"></div>
+        <p class="fragment-bounds-note hidden" id="fragment-bounds-note"></p>
+      </div>
+
+      <div class="controls-row">
+        <button type="button" class="btn" id="btn-fragment-preview">Preview frag/hr (your stats)</button>
+        <button type="button" class="btn btn-primary" id="btn-fragment-optimize">Optimize stats for fragments</button>
+      </div>
+
+      <div id="recommended-stats-fragment" class="recommended-box hidden">
+        <h3>Recommended stat allocation (fragments)</h3>
+        <p class="note">Does not change your inputs until you apply.</p>
+        <div id="recommended-stats-fragment-body"></div>
+        <button type="button" class="btn btn-primary" id="btn-apply-stats-fragment" style="margin-top:10px" disabled>Apply to stat inputs above</button>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h3>Fragment results</h3>
+        <div id="fragment-results-inner">
+          <p class="note">Pick a fragment, preview your stats, or optimize to see results.</p>
+        </div>
+      </div>
+
+      <p id="fragment-status" class="push-status"></p>
+      <p class="note">Fragment sim: rolled crits, block cards, exp/speed/stamina/loot mods, flurry speed, enrage/quake, partial floors. Only the selected currency is scored; other families still affect clear speed.</p>
+    </section>
+  </main>
+
+  <script src="js/build-store.js"></script>
+  <script src="js/archaeology-bundle.js?v=34"></script>
+  <script>
+    (function () {
+      function showBootError(msg) {
+        var st = document.getElementById("push-status");
+        if (st) {
+          st.textContent = msg;
+          st.classList.add("bad");
+        }
+        var err = document.getElementById("load-error");
+        if (err) {
+          err.classList.remove("hidden");
+          err.textContent = msg;
+        }
+      }
+      function bootGuard(fnName) {
+        return function () {
+          if (typeof window[fnName] === "function") return;
+          showBootError(
+            "Calculator script did not load. Ensure js/archaeology-bundle.js is next to index.html (F12 → Console for 404 errors).",
+          );
+        };
+      }
+      document.getElementById("btn-optimize")?.addEventListener("click", bootGuard("__archaeologyOptimize"));
+      document.getElementById("btn-xp-optimize")?.addEventListener("click", bootGuard("__archaeologyXpOptimize"));
+      document.getElementById("btn-fragment-optimize")?.addEventListener("click", bootGuard("__archaeologyFragmentOptimize"));
+    })();
+  </script>
+</body>
+</html>
