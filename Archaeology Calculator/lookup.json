@@ -1,0 +1,967 @@
+{
+  "_meta": {
+    "description": "Archaeology gamemode reference data for calculators. Blocks and rocks are the same thing.",
+    "fragment_display_decimals": 2
+  },
+
+  "stat_points": {
+    "_note": "1 point per archaeology level. Free respec anytime.",
+    "stats": {
+      "strength": {
+        "unlock": { "ascension": 0 },
+        "level_cap_base": 50,
+        "per_point": {
+          "flat_damage": 1,
+          "damage_percent": 0.01,
+          "crit_damage_percent": 0.03
+        }
+      },
+      "agility": {
+        "unlock": { "ascension": 0 },
+        "level_cap_base": 50,
+        "per_point": {
+          "max_stamina": 5,
+          "crit_chance": 0.01,
+          "speed_mod_proc_chance": 0.002
+        }
+      },
+      "perception": {
+        "unlock": { "ascension": 0 },
+        "level_cap_base": 25,
+        "per_point": {
+          "fragment_gain_percent": 0.04,
+          "loot_mod_proc_chance": 0.003,
+          "flat_armor_penetration": 2
+        }
+      },
+      "intellect": {
+        "unlock": { "ascension": 0 },
+        "level_cap_base": 25,
+        "per_point": {
+          "experience_gain_percent": 0.05,
+          "experience_mod_proc_chance": 0.003,
+          "armor_penetration_percent": 0.03
+        }
+      },
+      "luck": {
+        "unlock": { "ascension": 0 },
+        "level_cap_base": 25,
+        "per_point": {
+          "crit_chance": 0.02,
+          "all_mod_proc_chance_bonus": 0.002,
+          "golden_crosshair_chance": 0.005
+        }
+      },
+      "divinity": {
+        "unlock": { "ascension": 1 },
+        "level_cap_base": 10,
+        "per_point": {
+          "flat_damage": 2,
+          "super_crit_chance": 0.02,
+          "crosshair_auto_tap_chance": 0.02
+        }
+      },
+      "corruption": {
+        "unlock": { "ascension": 2 },
+        "level_cap_base": 10,
+        "per_point": {
+          "damage_percent": 0.06,
+          "max_stamina_percent": -0.03,
+          "all_mod_multiplier_bonus_percent": 0.01
+        }
+      }
+    }
+  },
+
+  "combat_timing": {
+    "_note": "Simulators should advance elapsed time per hit, not fractional hit counts during speed buffs. Mod magnitudes are upgrade-deterministic; only mod presence/spawn may be stochastic via proc_chance stats.",
+    "simulator_approach": "index_elapsed_seconds",
+    "stamina_per_hit": 1,
+    "attack_speed_multipliers": {
+      "baseline": 1,
+      "speed_mod_active": 2,
+      "flurry_active": 2,
+      "speed_mod_and_flurry_together": 4
+    },
+    "seconds_per_hit": {
+      "formula": "1 / attack_speed_multiplier",
+      "by_multiplier": {
+        "1": 1,
+        "2": 0.5,
+        "4": 0.25
+      }
+    },
+    "ability_cooldowns": {
+      "_note": "Cooldown reductions on upgrades/skills are expressed in attacks at baseline speed; when simulating with time index, convert using current seconds_per_hit if cooldown ticks in real time, or count discrete hits if cooldown is hit-based — confirm per skill when wiring sim."
+    }
+  },
+
+  "combat": {
+    "hits_to_break": {
+      "formula": "ceil(block_hp / damage_per_hit_after_armor)",
+      "stamina_per_break": "hits_to_break (1 stamina per hit)"
+    },
+    "armor": {
+      "type": "flat",
+      "damage_per_hit": "max(0, raw_damage - effective_armor)",
+      "example": { "raw_damage": 10, "block_armor": 4, "damage_dealt": 6 }
+    },
+    "armor_penetration": {
+      "flat": "reduces block armor before subtraction (order with % pen TBD)",
+      "percent": {
+        "rounding": "TBD (truncate vs nearest vs ceil — matters near damage thresholds)",
+        "implementation_priority": "low until % pen is on the build"
+      }
+    },
+    "base_damage": 10,
+    "base_max_stamina": 100,
+    "base_crit_damage_multiplier": 1.5,
+    "base_ultra_crit_damage_multiplier": 3,
+    "crit_damage_multiplier": "base_crit_damage_multiplier × (1 + sum of displayed crit_damage_percent bonuses). Each +3% STR / +1% upgrade is % of the 1.5× base (shows as +4.5% / +1.5% on the mult). UI truncates displayed × to 2 decimals.",
+    "ultra_crit_damage_multiplier": "base_ultra_crit_damage_multiplier + ultra_crit_damage_percent from upgrades",
+    "damage_stat_in_ui": "round(flat × damage_multiplier) — pre-armor, no crit averaging",
+    "average_hit_damage": "raw × (1 − crit_chance + crit_chance × crit_damage_multiplier)",
+    "raw_damage": {
+      "_note": "flat × damage_mult; sim uses average_hit_damage vs armor"
+    }
+  },
+
+  "optimizer_objectives": {
+    "fragment_farm": {
+      "deterministic_floor_budget": "fast baseline for E[fragments/hour] at a fixed stage band",
+      "known_bias": "Treats falling short of target depth and overshooting optimal depth similarly; understates risk of ending before the fragment type spawns.",
+      "asymmetric_depth": {
+        "below_family_first_stage": "zero fragments of that currency for that run segment",
+        "above_optimal_band": "lower spawn rate or tier efficiency but still farmable",
+        "priority": "reaching unlock stage for target family matters more than avoiding overshoot"
+      },
+      "recommended_metrics": [
+        "P(max_stage >= family_tier_first_stage) for target fragment",
+        "E[fragments | run reaches farm band] × P(reach band)",
+        "MC or constrained search on stage band, not E[max_stage] alone"
+      ],
+      "first_stage_source": "blocks.families.<family>.tiers[].first_stage"
+    },
+    "push": {
+      "primary": "E[max_stage] or P(max_stage >= target)",
+      "tooling": "MC run sim; deterministic floor budget is a weak lower/upper bound only"
+    }
+  },
+
+  "active_skills": {
+    "_note": "Calculator assumes auto use unless extended later.",
+    "skills": {
+      "enrage": {
+        "charges": 5,
+        "cooldown_seconds": 60,
+        "per_attack_while_active": {
+          "charges_consumed": 1,
+          "damage_percent": 0.2,
+          "crit_damage_percent": 1.0,
+          "guarantees_crit": false
+        }
+      },
+      "flurry": {
+        "charges": 5,
+        "cooldown_seconds": 120,
+        "on_cast": {
+          "attack_speed_multiplier": 2,
+          "attack_speed_percent": 1.0,
+          "stamina_added": 5
+        },
+        "_note": "With speed mod active, combined attack speed is 4× (not 2×+2× additive). See combat_timing.attack_speed_multipliers."
+      },
+      "quake": {
+        "charges": 5,
+        "cooldown_seconds": 180,
+        "per_attack_while_active": {
+          "charges_consumed": 1,
+          "cleave_damage_percent_of_hit": 0.2,
+          "targets": "all_blocks"
+        }
+      }
+    }
+  },
+
+  "external_unlocks": {
+    "_note": "Features unlocked outside the archaeology gamemode. Fragment gain bonuses from this section stack multiplicatively with each other and in-game sources.",
+    "fragment_gain_stacking": {
+      "_note": "Each source below sums its own bonus additively, then all sources multiply together.",
+      "between_sources": "multiplicative",
+      "within_source": "additive_percent"
+    },
+    "block_bonker": {
+      "player_state_flag": "has_block_bonker",
+      "effects_when_owned": {
+        "damage_percent_per_highest_stage": 0.01,
+        "max_stamina_percent_per_highest_stage": 0.01,
+        "speed_mod_gain_bonus": 15,
+        "speed_mod_duration_extra_hits": 15
+      },
+      "_speed_mod_clarification": "Base speed mod +10 hits at 2× attack speed; total hits from upgrades (see block_modifiers). Bonker +15 hits and +15 duration."
+    },
+    "fragment_bundle_iap": {
+      "player_state_flag": "has_fragment_bundle",
+      "source": "real_money_bundle",
+      "max_purchases": 1,
+      "fragment_gain_multiplier": 1.25
+    },
+    "cave_legendary_fish_tribute": {
+      "player_state_flag": "has_cave_legendary_fish_level_1_tribute",
+      "source": "Cave Legendary Fish (Level 1 Tribute)",
+      "fragment_gain_percent_per_mythic_chest": 0.0025,
+      "player_state_count": "mythic_chests_owned",
+      "within_source_stacking": "additive",
+      "formula": "1 + 0.0025 * mythic_chests_owned",
+      "example": "4 chests → +1% from this source → ×1.01 on total fragment gain"
+    },
+    "axolotl_skin_quest": {
+      "player_state_flag": "axolotl_skin_quest_rank",
+      "source": "Axolotl skin quest",
+      "fragment_gain_percent_per_rank": 0.03,
+      "rank_starts_at": 0,
+      "rank_0_has_bonus": true,
+      "within_source_stacking": "additive",
+      "formula": "1 + 0.03 * (rank + 1)",
+      "example": "rank 0 → +3% (×1.03); rank 2 → +9% from this source (×1.09)"
+    }
+  },
+
+  "cards": {
+    "_note": "Per block family (dirt–divine). Dirt has cards and the same quality HP/XP buffs but blocks do not drop fragments. Future: card-farm optimizer may differ from fragment farmer. Infernal buffs per block/tier are placeholder until mechanics are known.",
+    "families_with_cards": ["dirt", "common", "rare", "epic", "legendary", "mythic", "divine"],
+    "card_identity": "one card line per (block_family, block_tier 1–4)",
+    "on_block_destroy": {
+      "drop_card_chance_by_block_tier": {
+        "1": { "numerator": 1, "denominator": 1500 },
+        "2": { "numerator": 1, "denominator": 1500 },
+        "3": { "numerator": 1, "denominator": 1500 },
+        "4": { "numerator": 1, "denominator": 15000 }
+      }
+    },
+    "progression": {
+      "order": ["normal", "gilded", "polychrome", "infernal"],
+      "gild": { "requires": "normal_card" },
+      "polychrome_roll": {
+        "requires": "gilded_card",
+        "chance_by_block_tier": {
+          "1": { "numerator": 1, "denominator": 7500 },
+          "2": { "numerator": 1, "denominator": 7500 },
+          "3": { "numerator": 1, "denominator": 7500 },
+          "4": { "numerator": 1, "denominator": 75000 }
+        }
+      },
+      "infernal_shard_roll": {
+        "requires": "polychrome_card_completed_for_that_tier",
+        "requires_hades_idol": true,
+        "requires_poly_ignited": true,
+        "chance": { "numerator": 1, "denominator": 200000 },
+        "shards_per_success": 0.1,
+        "shards_for_full_infernal": 10,
+        "buffs": { "status": "placeholder", "_note": "unique per (block_family, block_tier); not encoded yet" }
+      }
+    },
+    "qualities": {
+      "normal": {
+        "block_hp_multiplier": 0.9,
+        "exp_and_loot_multiplier": 1.1,
+        "_note": "-10% HP, +10% exp/loot for matching block tier. Duplicate cards increase bonus — stacking rules TBD."
+      },
+      "gilded": {
+        "block_hp_multiplier": 0.8,
+        "exp_and_loot_multiplier": 1.2
+      },
+      "polychrome": {
+        "block_hp_multiplier": 0.65,
+        "exp_and_loot_multiplier": 1.35,
+        "max_with_polychrome_archaeology_card_upgrade": {
+          "block_hp_multiplier": 0.5,
+          "exp_and_loot_multiplier": 1.5,
+          "from_upgrade": "polychrome_archaeology_card_bonus",
+          "upgrade_adds_to_both_stats": 0.15
+        }
+      }
+    },
+    "archaeology_misc_card": {
+      "_note": "Separate from block-tier cards.",
+      "ability_cooldown_reduction": {
+        "normal": 0.03,
+        "gilded": 0.06,
+        "polychrome": 0.1
+      }
+    },
+    "future_optimizer": "card_farm_may_differ_from_fragment_farm_for_non_dirt_blocks"
+  },
+
+  "idols": {
+    "_note": "Idols use fragment currencies per tier except divine (divine_idols tokens). Most idols are out of archaeology scope except those listed in optimize_for_archaeology.",
+    "divine_idol_rolls": {
+      "currency": "divine_idols",
+      "cost_per_roll": 1,
+      "cost_increases": false,
+      "tier_probabilities": {
+        "common": 0.29,
+        "rare": 0.23,
+        "epic": 0.18,
+        "legendary": 0.14,
+        "mythic": 0.09,
+        "divine": 0.07
+      },
+      "_note": "Divine token does not guarantee a divine-tier idol; rolls random tier in pool."
+    },
+    "optimize_for_archaeology": ["hestia", "hades"],
+    "hestia": {
+      "id": "hestia",
+      "fragment_currency": "common",
+      "fragment_tier_label": "common",
+      "archaeology_effect": {
+        "fragment_gain_percent_per_stack": 0.0001,
+        "fragment_gain_cap_stacks": 3000,
+        "fragment_gain_cap_percent": 0.3
+      },
+      "enabled_when": { "ascension_min": 1 },
+      "unlock_roll_conditions": {
+        "min_rolls_in_tier_before_eligible": 20,
+        "tier_for_roll_gate": "common",
+        "_roll_pool_note": "Each idol unlock rolls randomly from eligible idols in pool. Equal weight unconfirmed; may depend on Obelisks (external) — placeholder."
+      },
+      "roll_mechanics": {
+        "status": "placeholder",
+        "assumed_equal_weight": null,
+        "obelisk_dependency": null
+      }
+    },
+    "hades": {
+      "id": "hades",
+      "fragment_currency": "divine_idols",
+      "idol_tier_label": "divine",
+      "enabled_when": { "archaeology_level_min": 85 },
+      "external_unlock": {
+        "fishing": "Blackened Basker Tribute 2"
+      },
+      "archaeology_effect": {
+        "unlocks_infernal_card_path": true,
+        "requires_polychrome_ignited_per_tier": true
+      },
+      "infernal_cards": {
+        "status": "placeholder",
+        "_note": "Per (block_family, block_tier) unique buff; shard roll 1/200000 for 0.1 shard after poly ignited. Full mechanics TBD."
+      },
+      "roll_mechanics": {
+        "status": "placeholder",
+        "pool": "divine_idol_rolls",
+        "obtaining_hades": "random divine-tier idol roll; not guaranteed"
+      }
+    }
+  },
+
+  "ascension": {
+    "_note": "Ascending resets progress. Believed to multiply upgrade costs by 5x per ascension (confirm when encoding upgrades).",
+    "upgrade_cost_multiplier_per_ascension": 5,
+    "tiers": {
+      "0": {
+        "label": "pre-ascension",
+        "unlocks_stats": ["strength", "agility", "perception", "intellect", "luck"]
+      },
+      "1": {
+        "requirements": {
+          "archaeology_level": 90,
+          "highest_stage": 115
+        },
+        "unlocks_stats": ["divinity"]
+      },
+      "2": {
+        "requirements": {
+          "archaeology_level": 100,
+          "highest_stage": 150
+        },
+        "unlocks_stats": ["corruption"]
+      }
+    }
+  },
+
+  "spawn_probabilities": {
+    "_note": "Per grid slot on non-boss stages. Percentages are per-slot spawn chance for that family; residual = empty slot (no block). Divine is not in random pool — boss/special only.",
+    "family_order": ["dirt", "common", "rare", "epic", "legendary", "mythic"],
+    "stage_bands": [
+      { "stage_min": 1, "stage_max": 2, "percent": { "dirt": 28.57, "common": 14.29 } },
+      { "stage_min": 3, "stage_max": 4, "percent": { "dirt": 25.4, "common": 12.7, "rare": 11.11 } },
+      { "stage_min": 5, "stage_max": 5, "percent": { "dirt": 25.52, "common": 10.94, "rare": 12.5 } },
+      { "stage_min": 6, "stage_max": 9, "percent": { "dirt": 22.97, "common": 9.84, "rare": 11.25, "epic": 10 } },
+      { "stage_min": 10, "stage_max": 11, "percent": { "dirt": 23.41, "common": 8.78, "rare": 9.88, "epic": 11.11 } },
+      { "stage_min": 12, "stage_max": 14, "percent": { "dirt": 21.74, "common": 8.15, "rare": 9.17, "epic": 10.32, "legendary": 7.14 } },
+      { "stage_min": 15, "stage_max": 19, "percent": { "dirt": 21.27, "common": 7.98, "rare": 8.97, "epic": 11.54, "legendary": 7.69 } },
+      { "stage_min": 20, "stage_max": 24, "percent": { "dirt": 19.5, "common": 7.31, "rare": 8.23, "epic": 12.34, "legendary": 8.64, "mythic": 5 } },
+      { "stage_min": 25, "stage_max": 29, "percent": { "dirt": 18.47, "common": 7.92, "rare": 9.05, "epic": 12.06, "legendary": 10.56, "mythic": 5 } },
+      { "stage_min": 30, "stage_max": 49, "percent": { "dirt": 18.1, "common": 9.05, "rare": 7.92, "epic": 11.88, "legendary": 11.88, "mythic": 5 } },
+      { "stage_min": 50, "stage_max": 74, "percent": { "dirt": 16.87, "common": 8.43, "rare": 9.84, "epic": 13.77, "legendary": 11.81, "mythic": 5.56 } },
+      { "stage_min": 75, "stage_max": null, "percent": { "dirt": 16.81, "common": 10.08, "rare": 10.08, "epic": 11.76, "legendary": 11.76, "mythic": 5.88 } }
+    ],
+    "empty_slot_percent": {
+      "_note": "100 minus sum of family percents in band",
+      "1-2": 57.14,
+      "3-4": 50.79,
+      "5": 51.04,
+      "6-9": 45.94,
+      "10-11": 46.82,
+      "12-14": 43.48,
+      "15-19": 42.55,
+      "20-24": 38.98,
+      "25-29": 36.94,
+      "30-49": 36.17,
+      "50-74": 33.72,
+      "75+": 33.63
+    }
+  },
+
+  "boss_stages": {
+    "_note": "Fixed 24-tile layouts (6×4). Overrides random per-slot spawns. Block tier uses tier_resolution rule at that stage.",
+    "grid_slots": 24,
+    "stages": {
+      "11": { "dirt": 24 },
+      "17": { "common": 24 },
+      "23": { "dirt": 24 },
+      "25": { "rare": 24 },
+      "29": { "epic": 24 },
+      "31": { "legendary": 24 },
+      "34": { "common": 20, "legendary": 4 },
+      "35": { "rare": 24 },
+      "41": { "epic": 24 },
+      "44": { "legendary": 24 },
+      "49": { "dirt": 6, "common": 6, "rare": 6, "mythic": 6 },
+      "74": { "common": 22, "divine": 2 },
+      "95": { "common": 24 },
+      "98": { "mythic": 24 },
+      "99": { "dirt": 4, "common": 4, "rare": 4, "epic": 4, "legendary": 4, "mythic": 4 },
+      "110": { "rare": 24 },
+      "125": { "epic": 24 },
+      "135": { "legendary": 24 },
+      "140": { "mythic": 24 },
+      "149": { "divine": 24 }
+    }
+  },
+
+  "blocks": {
+    "_note": "7 families × 4 tiers. HP: base_hp × 3^(tier-1). EXP: exp_base × 3^(tier-1). Armor (non-dirt): base × 1.65^(tier-1). Dirt = XP only, no fragments. First fragment currency is common.",
+    "tier_resolution": {
+      "_note": "On normal and boss spawns, a family's tier is always the highest tier unlocked at current stage (not a mix of lower tiers).",
+      "rule": "tier = max { t : tiers[t].first_stage <= current_stage }"
+    },
+    "rewards": {
+      "exp_formula": "exp_base * 3^(tier - 1)",
+      "exp_base_by_family": {
+        "dirt": 0.05,
+        "common": 0.15,
+        "rare": 0.35,
+        "epic": 1,
+        "legendary": 3.5,
+        "mythic": 7.5,
+        "divine": 20
+      },
+      "fragments_per_tier": [0.01, 0.02, 0.04, 0.08],
+      "fragments_formula": "fragments_per_tier[tier - 1] in matching currency (none for dirt)"
+    },
+    "tier_hp_multiplier_within_family": 3,
+    "tier_exp_multiplier_within_family": 3,
+    "armor_growth_per_tier": 1.65,
+    "families": {
+      "dirt": {
+        "fragment_currency": null,
+        "drops_fragments": false,
+        "exp_base_tier1": 0.05,
+        "hp_base_tier1": 100,
+        "armor": { "all_tiers": 0 },
+        "tiers": [
+          { "tier": 1, "first_stage": 1, "hp": 100, "armor": 0, "exp": 0.05, "fragments": null },
+          { "tier": 2, "first_stage": 12, "hp": 300, "armor": 0, "exp": 0.15, "fragments": null },
+          { "tier": 3, "first_stage": 24, "hp": 900, "armor": 0, "exp": 0.45, "fragments": null },
+          { "tier": 4, "first_stage": 81, "hp": 2700, "armor": 0, "exp": 1.35, "fragments": null }
+        ]
+      },
+      "common": {
+        "fragment_currency": "common",
+        "exp_base_tier1": 0.15,
+        "hp_base_tier1": 250,
+        "armor_base_tier1": 5,
+        "tiers": [
+          { "tier": 1, "first_stage": 1, "hp": 250, "armor": 5, "exp": 0.15, "fragments": 0.01 },
+          { "tier": 2, "first_stage": 18, "hp": 750, "armor": 8.25, "exp": 0.45, "fragments": 0.02 },
+          { "tier": 3, "first_stage": 30, "hp": 2250, "armor": 13.61, "exp": 1.35, "fragments": 0.04 },
+          { "tier": 4, "first_stage": 96, "hp": 6750, "armor": 22.46, "exp": 4.05, "fragments": 0.08 }
+        ]
+      },
+      "rare": {
+        "fragment_currency": "rare",
+        "exp_base_tier1": 0.35,
+        "hp_base_tier1": 550,
+        "armor_base_tier1": 12,
+        "tiers": [
+          { "tier": 1, "first_stage": 3, "hp": 550, "armor": 12, "exp": 0.35, "fragments": 0.01 },
+          { "tier": 2, "first_stage": 26, "hp": 1650, "armor": 19.8, "exp": 1.05, "fragments": 0.02 },
+          { "tier": 3, "first_stage": 36, "hp": 4950, "armor": 32.67, "exp": 3.15, "fragments": 0.04 },
+          { "tier": 4, "first_stage": 111, "hp": 14850, "armor": 53.91, "exp": 9.45, "fragments": 0.08 }
+        ]
+      },
+      "epic": {
+        "fragment_currency": "epic",
+        "exp_base_tier1": 1,
+        "hp_base_tier1": 1150,
+        "armor_base_tier1": 25,
+        "tiers": [
+          { "tier": 1, "first_stage": 6, "hp": 1150, "armor": 25, "exp": 1, "fragments": 0.01 },
+          { "tier": 2, "first_stage": 30, "hp": 3450, "armor": 41.25, "exp": 3, "fragments": 0.02 },
+          { "tier": 3, "first_stage": 42, "hp": 10350, "armor": 68.06, "exp": 9, "fragments": 0.04 },
+          { "tier": 4, "first_stage": 126, "hp": 31050, "armor": 112.3, "exp": 27, "fragments": 0.08 }
+        ]
+      },
+      "legendary": {
+        "fragment_currency": "legendary",
+        "exp_base_tier1": 3.5,
+        "hp_base_tier1": 1950,
+        "armor_base_tier1": 50,
+        "tiers": [
+          { "tier": 1, "first_stage": 12, "hp": 1950, "armor": 50, "exp": 3.5, "fragments": 0.01 },
+          { "tier": 2, "first_stage": 32, "hp": 5850, "armor": 82.5, "exp": 10.5, "fragments": 0.02 },
+          { "tier": 3, "first_stage": 45, "hp": 17550, "armor": 136.12, "exp": 31.5, "fragments": 0.04 },
+          { "tier": 4, "first_stage": 136, "hp": 52650, "armor": 224.61, "exp": 94.5, "fragments": 0.08 }
+        ]
+      },
+      "mythic": {
+        "fragment_currency": "mythic",
+        "exp_base_tier1": 7.5,
+        "hp_base_tier1": 3500,
+        "armor_base_tier1": 150,
+        "tiers": [
+          { "tier": 1, "first_stage": 20, "hp": 3500, "armor": 150, "exp": 7.5, "fragments": 0.01 },
+          { "tier": 2, "first_stage": 35, "hp": 10500, "armor": 247.5, "exp": 22.5, "fragments": 0.02 },
+          { "tier": 3, "first_stage": 50, "hp": 31500, "armor": 408.37, "exp": 67.5, "fragments": 0.04 },
+          { "tier": 4, "first_stage": 141, "hp": 94500, "armor": 673.82, "exp": 202.5, "fragments": 0.08 }
+        ]
+      },
+      "divine": {
+        "fragment_currency": "divine_idols",
+        "exp_base_tier1": 20,
+        "hp_base_tier1": 25000,
+        "armor_base_tier1": 300,
+        "tiers": [
+          { "tier": 1, "first_stage": 50, "hp": 25000, "armor": 300, "exp": 20, "fragments": 0.01 },
+          { "tier": 2, "first_stage": 75, "hp": 75000, "armor": 495, "exp": 60, "fragments": 0.02 },
+          { "tier": 3, "first_stage": 100, "hp": 225000, "armor": 816.75, "exp": 180, "fragments": 0.04 },
+          { "tier": 4, "first_stage": 150, "hp": 675000, "armor": 1347.64, "exp": 540, "fragments": 0.08 }
+        ]
+      }
+    },
+    "stage_scaling": {
+      "_note": "Every 50 stages from 100 inclusive. Multipliers stack multiplicatively at each milestone reached. Confirm if per-milestone-global vs per-family — encoded as global per milestone index.",
+      "interval": 50,
+      "first_stage": 100,
+      "milestone_stages": [100, 150, 200, 250, 300, 350, 400, 450, 500],
+      "hp_multiplier_per_milestone": [2, 2, 2, 2, 4, 2, 2, 2, 2],
+      "armor_multiplier_per_milestone": [1.5, 1, 1.5, 1.5, 2.25, 1.5, 1.5, 1.5, 1.5],
+      "cumulative_formula": "stat_at_stage = base_stat * product(multiplier[i] for i where milestone_stages[i] <= stage)"
+    }
+  },
+
+  "block_modifiers": {
+    "_note": "A block may have multiple modifiers but at most one of each type. Mod strength is NOT rolled. Value = base + contribution from archaeology upgrades (caps in upgrades.by_fragment_tier); simulator derives current and max from upgrade levels, not hardcoded ceilings.",
+    "value_scaling": "deterministic_from_upgrades",
+    "max_one_per_type_per_block": true,
+    "types": {
+      "experience": {
+        "alias": ["exp_mod", "experience_mod"],
+        "effect": "experience_from_block_multiplier",
+        "base": 3,
+        "upgrade_keys": ["exp_mod_gain_and_chance"]
+      },
+      "loot": {
+        "alias": ["loot_mod"],
+        "effect": "fragments_from_block_multiplier",
+        "base": 2,
+        "upgrade_keys": ["loot_mod_multiplier"]
+      },
+      "speed": {
+        "alias": ["speed_mod"],
+        "effect": "attack_speed_multiplier_while_active",
+        "attack_speed_multiplier": 2,
+        "base_bonus_hits": 10,
+        "upgrade_keys": ["max_stamina_stamina_mod_gain", "stamina_mod_gain_epic"],
+        "_note": "Fixed hit count from upgrades (+ Block Bonker +15 when owned). Each speed-mod block adds that many hits on first hit (stacks if speed already active; does not reset). With Flurry active, 4× attack speed; else 2×."
+      },
+      "stamina": {
+        "alias": ["stamina_mod"],
+        "effect": "stamina_restored_when_mod_triggers",
+        "base": 3,
+        "upgrade_keys": ["max_stamina_stamina_mod_gain", "stamina_mod_gain_epic"],
+        "cannot_exceed_max_stamina": true
+      }
+    },
+    "spawn_proc_stats": {
+      "_note": "Stat/upgrade '*_mod_proc_chance' controls whether a block spawns with (or gains) that mod type — separate from mod magnitude. Magnitude is never rolled.",
+      "speed_mod": "agility.speed_mod_proc_chance per point",
+      "loot_mod": "perception.loot_mod_proc_chance per point",
+      "experience_mod": "intellect.experience_mod_proc_chance per point",
+      "all_mod_types": "luck.all_mod_proc_chance_bonus per point",
+      "all_mod_magnitude": "corruption.all_mod_multiplier_bonus_percent per point"
+    }
+  },
+
+  "crosshairs": {
+    "red": {
+      "_note": "Normal crosses; manual tap for bonus damage on that block."
+    },
+    "golden": {
+      "source": "luck.golden_crosshair_chance",
+      "stronger_than_red": true,
+      "optimization_priority": "low_idle_assumption",
+      "future": "skill may auto-tap golden crosses"
+    },
+    "divinity_auto_tap": {
+      "source": "divinity.crosshair_auto_tap_chance",
+      "targets": "crosshairs"
+    }
+  },
+
+  "upgrades": {
+    "_note": "Bought with fragment currencies by tier (common / rare / epic / legendary / mythic). Unless flat_cost is set, each purchase uses geometric growth below. unlock_stage = highest stage reached when the upgrade row becomes purchasable (order matches by_fragment_tier lists).",
+    "default_growth_per_level": 1.2,
+    "cost_at_level": {
+      "raw": "base_cost * 1.2^(level - 1)",
+      "rule": "If raw >= 100: int(raw) (0 decimal places). Else: round(raw, 2).",
+      "example": "strength_stat_buff level 4: raw=172.8 → cost=172"
+    },
+    "by_fragment_tier": {
+      "common": [
+        {
+          "id": "flat_damage",
+          "unlock_stage": 1,
+          "per_level": { "flat_damage": 1 },
+          "cap": 25,
+          "base_cost": 0.5,
+          "verified_costs": [0.5, 0.6, 0.72, 0.86, 1.04, 1.24, 1.49, 1.79, 2.15, 2.58, 3.1]
+        },
+        {
+          "id": "flat_armor_penetration",
+          "unlock_stage": 2,
+          "per_level": { "flat_armor_penetration": 1 },
+          "cap": 25,
+          "base_cost": 0.75,
+          "verified_costs": [0.75, 0.9, 1.08, 1.3]
+        },
+        {
+          "id": "archaeology_exp_gain",
+          "unlock_stage": 3,
+          "per_level": { "archaeology_exp_gain_percent": 0.02 },
+          "cap": 25,
+          "base_cost": 1,
+          "verified_costs": [1, 1.2, 1.44, 1.73]
+        },
+        {
+          "id": "crit_chance_and_crit_damage",
+          "unlock_stage": 4,
+          "per_level": {
+            "crit_chance": 0.0025,
+            "crit_damage_percent": 0.01
+          },
+          "_crit_damage_note": "UI says +1% crit damage per level; stacks as +1% of 1.5× base (+0.015 to multiplier per level).",
+          "cap": 25,
+          "base_cost": 2,
+          "verified_costs": [2, 2.4, 2.88]
+        },
+        {
+          "id": "strength_stat_buff",
+          "unlock_stage": 13,
+          "per_level": {
+            "strength_flat_damage_bonus": 0.2,
+            "strength_damage_percent_bonus": 0.001
+          },
+          "cap": 5,
+          "base_cost": 100,
+          "verified_costs": [100, 120, 144, 172]
+        },
+        {
+          "id": "polychrome_archaeology_card_bonus",
+          "unlock_stage": 34,
+          "per_level": { "polychrome_card_bonus_add_percent": 0.15 },
+          "cap": 1,
+          "flat_cost": 10000,
+          "_effect": "Raises polychrome card bonuses from 35% to 50% on HP reduction and exp/loot for matching block cards (rare fragment tier upgrade)."
+        }
+      ],
+      "rare": [
+        {
+          "id": "max_stamina_and_stamina_mod_chance",
+          "unlock_stage": 5,
+          "per_level": {
+            "max_stamina": 2,
+            "stamina_mod_proc_chance": 0.0005
+          },
+          "cap": 20,
+          "base_cost": 2.4
+        },
+        {
+          "id": "flat_damage_rare",
+          "unlock_stage": 6,
+          "per_level": { "flat_damage": 2 },
+          "cap": 20,
+          "base_cost": 3
+        },
+        {
+          "id": "loot_mod_multiplier",
+          "unlock_stage": 6,
+          "per_level": { "loot_mod_multiplier_gain": 0.3 },
+          "cap": 10,
+          "base_cost": 4.5
+        },
+        {
+          "id": "enrage_buff",
+          "unlock_stage": 7,
+          "per_level": {
+            "enrage_damage_percent": 0.02,
+            "enrage_crit_damage_percent": 0.02,
+            "enrage_cooldown_attacks": -1
+          },
+          "cap": 15,
+          "base_cost": 6
+        },
+        {
+          "id": "agility_stat_buff",
+          "unlock_stage": 15,
+          "per_level": {
+            "agility_max_stamina_bonus": 1,
+            "agility_stamina_mod_proc_chance_bonus": 0.0002
+          },
+          "cap": 5,
+          "base_cost": 50
+        },
+        {
+          "id": "perception_stat_buff",
+          "unlock_stage": 22,
+          "per_level": {
+            "perception_loot_mod_proc_chance_bonus": 0.0001,
+            "perception_armor_penetration_percent_bonus": 0.01
+          },
+          "cap": 5,
+          "base_cost": 150
+        },
+        {
+          "id": "fragment_gain_multiplier",
+          "unlock_stage": 36,
+          "per_level": { "fragment_gain_multiplier": 1.25 },
+          "cap": 1,
+          "flat_cost": 9000
+        }
+      ],
+      "epic": [
+        {
+          "id": "flat_damage_super_crit",
+          "unlock_stage": 9,
+          "per_level": {
+            "flat_damage": 2,
+            "super_crit_chance": 0.0035
+          },
+          "cap": 25,
+          "base_cost": 3.5
+        },
+        {
+          "id": "exp_and_fragment_gain",
+          "unlock_stage": 10,
+          "per_level": {
+            "archaeology_exp_gain_percent": 0.03,
+            "fragment_gain_percent": 0.02
+          },
+          "cap": 20,
+          "base_cost": 5
+        },
+        {
+          "id": "flurry_buff",
+          "unlock_stage": 11,
+          "per_level": {
+            "flurry_stamina_on_cast": 1,
+            "flurry_cooldown_attacks": -1
+          },
+          "cap": 10,
+          "base_cost": 7.5
+        },
+        {
+          "id": "max_stamina_stamina_mod_gain",
+          "unlock_stage": 12,
+          "per_level": {
+            "max_stamina": 4,
+            "stamina_mod_gain": 1
+          },
+          "cap": 5,
+          "base_cost": 25
+        },
+        {
+          "id": "intellect_stat_buff",
+          "unlock_stage": 24,
+          "per_level": {
+            "intellect_exp_gain_percent_bonus": 0.01,
+            "intellect_exp_mod_proc_chance_bonus": 0.0001
+          },
+          "cap": 5,
+          "base_cost": 125
+        },
+        {
+          "id": "stamina_mod_gain_epic",
+          "unlock_stage": 38,
+          "per_level": { "stamina_mod_gain": 2 },
+          "cap": 1,
+          "flat_cost": 8000
+        }
+      ],
+      "legendary": [
+        {
+          "id": "exp_gain_max_stamina_percent",
+          "unlock_stage": 17,
+          "per_level": {
+            "archaeology_exp_gain_percent": 0.05,
+            "max_stamina_percent": 0.01
+          },
+          "cap": 15,
+          "base_cost": 7
+        },
+        {
+          "id": "armor_pen_ability_cooldown",
+          "unlock_stage": 18,
+          "per_level": {
+            "armor_penetration_percent": 0.02,
+            "all_ability_cooldown_attacks": -1
+          },
+          "cap": 10,
+          "base_cost": 9
+        },
+        {
+          "id": "crit_and_super_crit_damage",
+          "unlock_stage": 20,
+          "per_level": {
+            "crit_damage_percent": 0.02,
+            "super_crit_damage_percent": 0.02
+          },
+          "cap": 20,
+          "base_cost": 12
+        },
+        {
+          "id": "quake_buff",
+          "unlock_stage": 20,
+          "per_level": {
+            "quake_attacks_per_activation": 1,
+            "quake_cooldown_attacks": -2
+          },
+          "cap": 10,
+          "base_cost": 15
+        },
+        {
+          "id": "all_mod_chances",
+          "unlock_stage": 40,
+          "per_level": { "all_mod_proc_chance_percent": 0.015 },
+          "cap": 1,
+          "flat_cost": 7000
+        }
+      ],
+      "mythic": [
+        {
+          "id": "damage_percent_flat_armor_pen",
+          "unlock_stage": 26,
+          "per_level": {
+            "damage_percent": 0.02,
+            "flat_armor_penetration": 3
+          },
+          "cap": 20,
+          "base_cost": 6
+        },
+        {
+          "id": "super_crit_ultra_crit_chance",
+          "unlock_stage": 28,
+          "per_level": {
+            "super_crit_chance": 0.0035,
+            "ultra_crit_chance": 0.01
+          },
+          "cap": 20,
+          "base_cost": 10
+        },
+        {
+          "id": "exp_mod_gain_and_chance",
+          "unlock_stage": 30,
+          "per_level": {
+            "exp_mod_multiplier_gain": 0.1,
+            "exp_mod_proc_chance": 0.001
+          },
+          "cap": 20,
+          "base_cost": 15
+        },
+        {
+          "id": "instacharge_max_stamina_per_hit",
+          "unlock_stage": 32,
+          "per_level": {
+            "ability_instacharge_chance": 0.003,
+            "max_stamina_per_hit": 4
+          },
+          "cap": 20,
+          "base_cost": 20,
+          "_uncertain": "max_stamina +4 assumed per hit; not yet confirmed in-game"
+        },
+        {
+          "id": "exp_gain_2x_stat_caps",
+          "unlock_stage": 42,
+          "per_level": {
+            "archaeology_exp_gain_multiplier": 2,
+            "stat_point_level_cap_bonus": 5,
+            "stat_caps_affected": ["strength", "agility", "perception", "intellect", "luck", "divinity", "corruption"]
+          },
+          "cap": 1,
+          "flat_cost": 5000
+        }
+      ]
+    }
+  },
+
+  "gem_upgrades": {
+    "_note": "Paid with gems (outside fragment currencies). Effective level cap is min(nominal_cap, archaeology_level + 4) — e.g. all three cap at 5 when archaeology level is 1; stamina track reaches nominal 50 at archaeology level 46.",
+    "effective_cap_formula": "min(nominal_cap, archaeology_level + 4)",
+    "cost": {
+      "growth_per_level": 1.05,
+      "formula": "int(base_cost * 1.05^(level - 1))",
+      "max_cost_before_first_ascension": 1000,
+      "after_ascension_1": "no max_cost cap; costs continue scaling at 1.05×"
+    },
+    "upgrades": [
+      {
+        "id": "gem_stamina_and_stamina_mod",
+        "per_level": {
+          "max_stamina": 2,
+          "stamina_mod_proc_chance": 0.005
+        },
+        "nominal_cap": 50,
+        "base_cost": 300,
+        "verified_costs": [300, 315, 330, 347, 364, 382, 402, 422]
+      },
+      {
+        "id": "gem_exp_and_exp_mod",
+        "per_level": {
+          "archaeology_exp_gain_percent": 0.05,
+          "experience_mod_proc_chance": 0.005
+        },
+        "nominal_cap": 25,
+        "base_cost": 400,
+        "verified_costs": [400, 420, 441, 463, 486, 510]
+      },
+      {
+        "id": "gem_fragment_and_loot_mod",
+        "per_level": {
+          "fragment_gain_percent": 0.02,
+          "loot_mod_proc_chance": 0.005
+        },
+        "nominal_cap": 25,
+        "base_cost": 500,
+        "verified_costs": [500, 525, 551]
+      }
+    ]
+  },
+
+  "terminology": {
+    "stage": "Same as floor for calculator purposes unless specified otherwise.",
+    "floor": "Alias of stage.",
+    "block": "Same as rock."
+  }
+}
