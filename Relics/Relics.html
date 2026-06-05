@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Divine Relic Reroll Calculator</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1f2430;
+      --text: #e8ecf1;
+      --muted: #a8b0be;
+      --accent: #78a6ff;
+      --danger: #ff7a7a;
+      --border: #2e3443;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0 0 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(120, 166, 255, 0.15);
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .option-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--panel-2);
+      opacity: 0.7;
+      transition: opacity 0.15s ease;
+    }
+
+    .option-card.active {
+      opacity: 1;
+    }
+
+    .option-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .option-title input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+
+    .error {
+      min-height: 1.3em;
+      color: var(--danger);
+      margin: 6px 0 10px;
+      font-size: 0.95rem;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+      font-size: 0.95rem;
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+    }
+
+    .hidden-row {
+      display: none;
+    }
+
+    .key {
+      color: var(--muted);
+    }
+
+    .value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .footnote {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .normal-tail-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .method {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .notes-box {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .notes-box h2 {
+      margin-bottom: 8px;
+    }
+
+    .explanation-note {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+
+    .explanation-note p {
+      margin: 0;
+    }
+
+    .explanation-note p + p {
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Divine Relic Reroll Calculator</h1>
+      <p class="subtitle">Each relic has a 1 / 25,000 divine chance. One reroll affects all relics and costs 200 gems.</p>
+
+      <div class="grid">
+        <div>
+          <label for="relics">Number of relics owned</label>
+          <input id="relics" type="number" min="0" step="1" value="10000" />
+        </div>
+      </div>
+
+      <div class="options-grid">
+        <section id="option1Card" class="option-card active">
+          <div class="option-title">
+            <input id="option1Mode" type="checkbox" checked />
+            <span>Option 1, solves for Gem cost</span>
+          </div>
+          <div class="grid">
+            <div>
+              <label for="boughtDivine">Bought divine relics</label>
+              <input id="boughtDivine" type="number" min="0" step="1" value="0" />
+            </div>
+            <div>
+              <label for="target">Target divine rolls wanted</label>
+              <input id="target" type="number" min="0" step="1" value="1" />
+            </div>
+          </div>
+        </section>
+
+        <section id="option2Card" class="option-card">
+          <div class="option-title">
+            <input id="option2Mode" type="checkbox" />
+            <span>Option 2, solves for expected number of divine relics</span>
+          </div>
+          <div class="grid">
+            <div>
+              <label for="gemBudget">Desired gems to spend</label>
+              <input id="gemBudget" type="number" min="0" step="1" value="20000" />
+            </div>
+            <div>
+              <label for="desiredSuccessChance">Desired success chance (%)</label>
+              <input id="desiredSuccessChance" type="number" min="0" max="100" step="0.1" value="63.2" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="error" class="error" aria-live="polite"></div>
+
+      <div class="results">
+        <div class="panel">
+          <h2>Main Results</h2>
+          <div id="mainRow1" class="row"><span id="mainKey1" class="key">Solved target divine rolls</span><span id="solvedTarget" class="value">-</span></div>
+          <div id="mainRow2" class="row"><span id="mainKey2" class="key">Budget rerolls (full rerolls)</span><span id="budgetRerolls" class="value">-</span></div>
+          <div id="mainRow3" class="row"><span id="mainKey3" class="key">Chance of target or more</span><span id="chancePct" class="value">-</span></div>
+          <div id="mainRow4" class="row"><span id="mainKey4" class="key">Equivalent odds</span><span id="chanceOneIn" class="value">-</span></div>
+          <div id="mainRow5" class="row"><span id="mainKey5" class="key">Effective target rate (Relics / Target)</span><span id="effectiveRate" class="value">-</span></div>
+          <div id="mainRow6" class="row"><span id="mainKey6" class="key">Expected rerolls</span><span id="expectedRerolls" class="value">-</span></div>
+          <div id="mainRow7" class="row"><span id="mainKey7" class="key">Expected rerolls</span><span id="row7Value" class="value">-</span></div>
+          <div id="mainRow8" class="row"><span id="mainKey8" class="key">Expected gem cost</span><span id="expectedGems" class="value">-</span></div>
+          <div id="method" class="method"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Distribution Reference</h2>
+          <div class="row"><span class="key">Expected divine rolls (mean)</span><span id="mean" class="value">-</span></div>
+          <div class="row"><span class="key">+1 Std.Dev</span><span id="plus1" class="value">-</span></div>
+          <div class="row"><span class="key">+2 Std.Dev</span><span id="plus2" class="value">-</span></div>
+          <div class="row"><span class="key">+3 Std.Dev</span><span id="plus3" class="value">-</span></div>
+          <div class="row"><span class="key">Std. deviation</span><span id="stdDev" class="value">-</span></div>
+        </div>
+
+        <div class="panel">
+          <h2 id="bandTitle">Band Probabilities (One Full Reroll)</h2>
+          <div class="row"><span class="key">Prob of +1 deviation</span><span id="band1" class="value">-</span></div>
+          <div class="row"><span class="key">Prob between +1 and +2 deviations</span><span id="band2" class="value">-</span></div>
+          <div class="row"><span class="key">Prob between +2 and +3 deviations</span><span id="band3" class="value">-</span></div>
+          <div class="row"><span class="key">Prob of +3 or more deviations</span><span id="band4" class="value">-</span></div>
+        </div>
+      </div>
+
+      <p class="footnote">
+        Note: In Option 1, standard-deviation bands are based on one full reroll. In Option 2, they are based on the total across all budgeted rerolls. Bought divine relics are included in Option 1 and ignored in Option 2.
+      </p>
+      <p class="normal-tail-note">
+        In Option 2, bought divine relics are ignored and the solved target is based only on relic count plus gem budget.
+      </p>
+      <p class="normal-tail-note">
+        One-tailed normal reference: P(Z &gt; 1 std. dev.) about 15.87%, P(Z &gt; 2 std. dev.) about 2.28%, and P(Z &gt; 3 std. dev.) about 0.13%.
+      </p>
+
+      <section class="notes-box">
+        <h2>How to Read This Calculator</h2>
+        <div class="explanation-note">
+          <p>
+            Enter your total relics, then choose one mode. The calculator updates instantly and uses one full reroll = 200 gems.
+          </p>
+          <p>
+            Option 1 (solves for gem cost): Enter bought divine relics and a target number of divine rolls. Bought divines are guaranteed and are added to the reroll outcome when calculating target chance, expected rerolls, and expected cost.
+          </p>
+          <p>
+            Option 2 (solves for target): Enter gem budget and desired success chance. The tool finds the highest integer target that meets that cumulative success chance across your budgeted rerolls. Bought divine relics are ignored in this mode.
+          </p>
+          <p>
+            First column: Mode-specific planning stats. In Option 2, "total probability of hitting target" is cumulative across budgeted rerolls, while "probability for each roll" is the single-reroll chance for that solved target.
+          </p>
+          <p>
+            Second column: Distribution reference (mean and +1/+2/+3 standard-deviation markers). This describes the outcome spread used by the probability bands.
+          </p>
+          <p>
+            Third column: Deviation-band probabilities. In Option 1 these are for one reroll; in Option 2 they are for total outcomes across all budgeted rerolls.
+          </p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var P = 1 / 25000;
+      var GEM_COST_PER_REROLL = 200;
+      var POISSON_MAX_LAMBDA = 120;
+      var ODDS_CAP_ONE_IN = 1000000;
+      var MIN_DISPLAY_PERCENT = 100 / ODDS_CAP_ONE_IN;
+
+      var relicInput = document.getElementById("relics");
+      var boughtDivineInput = document.getElementById("boughtDivine");
+      var targetInput = document.getElementById("target");
+      var gemBudgetInput = document.getElementById("gemBudget");
+      var desiredSuccessChanceInput = document.getElementById("desiredSuccessChance");
+      var option1ModeInput = document.getElementById("option1Mode");
+      var option2ModeInput = document.getElementById("option2Mode");
+      var option1Card = document.getElementById("option1Card");
+      var option2Card = document.getElementById("option2Card");
+      var errorEl = document.getElementById("error");
+
+      var out = {
+        mainRow1: document.getElementById("mainRow1"),
+        mainRow2: document.getElementById("mainRow2"),
+        mainRow3: document.getElementById("mainRow3"),
+        mainRow4: document.getElementById("mainRow4"),
+        mainRow5: document.getElementById("mainRow5"),
+        mainRow6: document.getElementById("mainRow6"),
+        mainRow7: document.getElementById("mainRow7"),
+        mainRow8: document.getElementById("mainRow8"),
+        mainKey1: document.getElementById("mainKey1"),
+        mainKey2: document.getElementById("mainKey2"),
+        mainKey3: document.getElementById("mainKey3"),
+        mainKey4: document.getElementById("mainKey4"),
+        mainKey5: document.getElementById("mainKey5"),
+        mainKey6: document.getElementById("mainKey6"),
+        mainKey7: document.getElementById("mainKey7"),
+        mainKey8: document.getElementById("mainKey8"),
+        solvedTarget: document.getElementById("solvedTarget"),
+        budgetRerolls: document.getElementById("budgetRerolls"),
+        chancePct: document.getElementById("chancePct"),
+        chanceOneIn: document.getElementById("chanceOneIn"),
+        effectiveRate: document.getElementById("effectiveRate"),
+        expectedRerolls: document.getElementById("expectedRerolls"),
+        row7Value: document.getElementById("row7Value"),
+        expectedGems: document.getElementById("expectedGems"),
+        mean: document.getElementById("mean"),
+        plus1: document.getElementById("plus1"),
+        plus2: document.getElementById("plus2"),
+        plus3: document.getElementById("plus3"),
+        stdDev: document.getElementById("stdDev"),
+        bandTitle: document.getElementById("bandTitle"),
+        band1: document.getElementById("band1"),
+        band2: document.getElementById("band2"),
+        band3: document.getElementById("band3"),
+        band4: document.getElementById("band4"),
+        method: document.getElementById("method")
+      };
+
+      function setText(el, value) {
+        el.textContent = value;
+      }
+
+      function withCommas(value, maxDecimals) {
+        return Number(value).toLocaleString(undefined, {
+          maximumFractionDigits: maxDecimals == null ? 4 : maxDecimals
+        });
+      }
+
+      function formatProbability(prob) {
+        if (!isFinite(prob) || prob <= 0) {
+          return "0";
+        }
+        if (prob < 1e-8) {
+          return prob.toExponential(3);
+        }
+        return withCommas(prob, 8);
+      }
+
+      function formatPercent(prob) {
+        if (!isFinite(prob) || prob <= 0) {
+          return "0";
+        }
+        var pct = prob * 100;
+        if (pct < MIN_DISPLAY_PERCENT) {
+          return "<" + MIN_DISPLAY_PERCENT + "%";
+        }
+        return withCommas(pct, 6) + "%";
+      }
+
+      function formatOneIn(prob) {
+        if (prob <= 0 || !isFinite(prob)) {
+          return "1 in > " + withCommas(ODDS_CAP_ONE_IN, 0);
+        }
+        if (prob >= 1) {
+          return "Guaranteed (1 in 1)";
+        }
+        if (prob * 100 < MIN_DISPLAY_PERCENT) {
+          return "1 in > " + withCommas(ODDS_CAP_ONE_IN, 0);
+        }
+        var inv = 1 / prob;
+        if (!isFinite(inv)) {
+          return "1 in > 1e308";
+        }
+        if (inv >= 1e9) {
+          return "1 in " + inv.toExponential(3);
+        }
+        return "1 in " + withCommas(inv, 2);
+      }
+
+      function formatExpectedRerollsFromProbability(prob) {
+        if (prob <= 0 || !isFinite(prob)) {
+          return withCommas(ODDS_CAP_ONE_IN, 0) + "+";
+        }
+        var expected = 1 / prob;
+        if (prob * 100 < MIN_DISPLAY_PERCENT) {
+          return withCommas(ODDS_CAP_ONE_IN, 0) + "+";
+        }
+        return withCommas(Number(expected.toFixed(2)), 2);
+      }
+
+      function formatExpectedGemsFromProbability(prob) {
+        if (prob <= 0 || !isFinite(prob)) {
+          return withCommas(ODDS_CAP_ONE_IN * GEM_COST_PER_REROLL, 0) + "+ gems";
+        }
+        var gems = Math.round((1 / prob) * GEM_COST_PER_REROLL);
+        if (prob * 100 < MIN_DISPLAY_PERCENT) {
+          return withCommas(ODDS_CAP_ONE_IN * GEM_COST_PER_REROLL, 0) + "+ gems";
+        }
+        return withCommas(gems, 0) + " gems";
+      }
+
+      function erfApprox(x) {
+        var sign = x >= 0 ? 1 : -1;
+        var absX = Math.abs(x);
+        var a1 = 0.254829592;
+        var a2 = -0.284496736;
+        var a3 = 1.421413741;
+        var a4 = -1.453152027;
+        var a5 = 1.061405429;
+        var p = 0.3275911;
+        var t = 1 / (1 + p * absX);
+        var y = 1 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * Math.exp(-absX * absX);
+        return sign * y;
+      }
+
+      function normalCdf(z) {
+        return 0.5 * (1 + erfApprox(z / Math.SQRT2));
+      }
+
+      function normalApproxCdfInteger(k, mean, stdDev) {
+        if (k < 0) {
+          return 0;
+        }
+        if (stdDev === 0) {
+          return k >= mean ? 1 : 0;
+        }
+        var z = (k + 0.5 - mean) / stdDev;
+        var c = normalCdf(z);
+        if (c < 0) return 0;
+        if (c > 1) return 1;
+        return c;
+      }
+
+      function poissonCdf(k, lambda) {
+        if (k < 0) return 0;
+        if (lambda === 0) return 1;
+
+        var pmf = Math.exp(-lambda);
+        var sum = pmf;
+        for (var i = 1; i <= k; i += 1) {
+          pmf *= lambda / i;
+          sum += pmf;
+          if (!isFinite(sum)) {
+            return 1;
+          }
+        }
+        return Math.min(1, Math.max(0, sum));
+      }
+
+      function binomialCdfExact(k, n, p) {
+        if (k < 0) return 0;
+        if (k >= n) return 1;
+        if (p <= 0) return 1;
+        if (p >= 1) return k >= n ? 1 : 0;
+
+        var q = 1 - p;
+        var pmf = Math.exp(n * Math.log(q));
+        var sum = pmf;
+
+        for (var i = 0; i < k; i += 1) {
+          var ratio = ((n - i) / (i + 1)) * (p / q);
+          pmf *= ratio;
+          sum += pmf;
+        }
+
+        if (!isFinite(sum)) return 1;
+        return Math.min(1, Math.max(0, sum));
+      }
+
+      function chooseMethod(n, t, maxBandK) {
+        var mean = n * P;
+        var maxKNeeded = Math.max(t - 1, maxBandK, 0);
+        var exactFeasible = n <= 2000000 && maxKNeeded <= 250000;
+        if (exactFeasible) return "exact-binomial";
+
+        // Direct Poisson summation starts from e^-lambda and underflows once lambda grows.
+        // For larger lambda, use normal approximation with continuity correction instead.
+        var poissonFeasible = mean <= POISSON_MAX_LAMBDA && maxKNeeded <= 300000;
+        if (poissonFeasible) return "poisson";
+
+        return "normal";
+      }
+
+      function makeCdf(method, n, mean, stdDev) {
+        var baseCdf;
+        if (method === "exact-binomial") {
+          baseCdf = function (k) {
+            return binomialCdfExact(k, n, P);
+          };
+        } else if (method === "poisson") {
+          baseCdf = function (k) {
+            return poissonCdf(k, mean);
+          };
+        } else {
+          baseCdf = function (k) {
+            return normalApproxCdfInteger(k, mean, stdDev);
+          };
+        }
+
+        return function (k) {
+          if (k < 0) return 0;
+          if (k >= n) return 1;
+          return baseCdf(k);
+        };
+      }
+
+      function rangeProbability(cdf, lowerInclusive, upperInclusive) {
+        if (upperInclusive < lowerInclusive) {
+          return 0;
+        }
+        return Math.max(0, cdf(upperInclusive) - cdf(lowerInclusive - 1));
+      }
+
+      function atLeastProbability(cdf, t) {
+        if (t <= 0) return 1;
+        return Math.max(0, 1 - cdf(t - 1));
+      }
+
+      function formatBandProbability(prob, lowerInclusive, upperInclusive) {
+        if (upperInclusive < lowerInclusive) {
+          return "0% (empty integer band)";
+        }
+        return formatPercent(prob) + " (" + formatProbability(prob) + ")";
+      }
+
+      function probabilityWithinRerolls(singleRollProbability, rerolls) {
+        if (rerolls <= 0) return 0;
+        if (singleRollProbability <= 0) return 0;
+        if (singleRollProbability >= 1) return 1;
+        var logMiss = Math.log1p(-singleRollProbability);
+        return 1 - Math.exp(rerolls * logMiss);
+      }
+
+      function showMainRows(showFirst, showSecond, showThird, showFourth, showFifth, showSixth, showSeventh, showEighth) {
+        out.mainRow1.classList.toggle("hidden-row", !showFirst);
+        out.mainRow2.classList.toggle("hidden-row", !showSecond);
+        out.mainRow3.classList.toggle("hidden-row", !showThird);
+        out.mainRow4.classList.toggle("hidden-row", !showFourth);
+        out.mainRow5.classList.toggle("hidden-row", !showFifth);
+        out.mainRow6.classList.toggle("hidden-row", !showSixth);
+        out.mainRow7.classList.toggle("hidden-row", !showSeventh);
+        out.mainRow8.classList.toggle("hidden-row", !showEighth);
+      }
+
+      function getActiveOption() {
+        if (option2ModeInput.checked) return 2;
+        return 1;
+      }
+
+      function syncOptionCheckboxes(preferred) {
+        if (preferred === 1) {
+          option1ModeInput.checked = true;
+          option2ModeInput.checked = false;
+        } else {
+          option1ModeInput.checked = false;
+          option2ModeInput.checked = true;
+        }
+        option1Card.classList.toggle("active", option1ModeInput.checked);
+        option2Card.classList.toggle("active", option2ModeInput.checked);
+        boughtDivineInput.disabled = !option1ModeInput.checked;
+        targetInput.disabled = !option1ModeInput.checked;
+        gemBudgetInput.disabled = !option2ModeInput.checked;
+        desiredSuccessChanceInput.disabled = !option2ModeInput.checked;
+      }
+
+      function solveTargetFromBudget(n, rerollsBudget, desiredSuccessProbability) {
+        if (rerollsBudget <= 0) {
+          return 0;
+        }
+
+        var meanBinomial = n * P;
+        var stdDev = Math.sqrt(n * P * (1 - P));
+        var requiredProbability = desiredSuccessProbability;
+
+        function probabilityForTarget(targetDivines) {
+          var method = chooseMethod(n, targetDivines, targetDivines);
+          var cdf = makeCdf(method, n, meanBinomial, stdDev);
+          var singleRollProbability = atLeastProbability(cdf, targetDivines);
+          return probabilityWithinRerolls(singleRollProbability, rerollsBudget);
+        }
+
+        var low = 0;
+        var high = n;
+        while (low < high) {
+          var mid = Math.floor((low + high + 1) / 2);
+          var pMid = probabilityForTarget(mid);
+          if (pMid >= requiredProbability) {
+            low = mid;
+          } else {
+            high = mid - 1;
+          }
+        }
+        return low;
+      }
+
+      function buildStats(n, boughtDivines, targetDivines) {
+        var meanBinomial = n * P;
+        var mean = boughtDivines + meanBinomial;
+        var stdDev = Math.sqrt(n * P * (1 - P));
+        var b0 = mean;
+        var b1 = mean + stdDev;
+        var b2 = mean + 2 * stdDev;
+        var b3 = mean + 3 * stdDev;
+
+        var band1Lower = Math.ceil(b0);
+        var band1Upper = Math.ceil(b1) - 1;
+        var band2Lower = Math.ceil(b1);
+        var band2Upper = Math.ceil(b2) - 1;
+        var band3Lower = Math.ceil(b2);
+        var band3Upper = Math.ceil(b3) - 1;
+        var band4Lower = Math.ceil(b3);
+
+        var maxBandTotalK = Math.max(band1Upper, band2Upper, band3Upper, band4Lower);
+        var maxBandBinomialK = maxBandTotalK - boughtDivines;
+        var targetBinomialK = targetDivines - boughtDivines;
+        var method = chooseMethod(n, targetBinomialK, maxBandBinomialK);
+        var cdfBinomial = makeCdf(method, n, meanBinomial, stdDev);
+
+        var pTargetOrMore = atLeastProbability(cdfBinomial, targetBinomialK);
+        var expectedRerolls = pTargetOrMore > 0 ? (1 / pTargetOrMore) : Infinity;
+        var expectedGems = Number.isFinite(expectedRerolls) ? Math.round(expectedRerolls * GEM_COST_PER_REROLL) : Infinity;
+        var effectiveRate = targetDivines > 0 ? (n / targetDivines) : Infinity;
+
+        var pBand1 = rangeProbability(cdfBinomial, band1Lower - boughtDivines, band1Upper - boughtDivines);
+        var pBand2 = rangeProbability(cdfBinomial, band2Lower - boughtDivines, band2Upper - boughtDivines);
+        var pBand3 = rangeProbability(cdfBinomial, band3Lower - boughtDivines, band3Upper - boughtDivines);
+        var pBand4 = atLeastProbability(cdfBinomial, band4Lower - boughtDivines);
+
+        return {
+          method: method,
+          mean: mean,
+          stdDev: stdDev,
+          b1: b1,
+          b2: b2,
+          b3: b3,
+          pTargetOrMore: pTargetOrMore,
+          expectedRerolls: expectedRerolls,
+          expectedGems: expectedGems,
+          effectiveRate: effectiveRate,
+          pBand1: pBand1,
+          pBand2: pBand2,
+          pBand3: pBand3,
+          pBand4: pBand4,
+          band1Lower: band1Lower,
+          band1Upper: band1Upper,
+          band2Lower: band2Lower,
+          band2Upper: band2Upper,
+          band3Lower: band3Lower,
+          band3Upper: band3Upper
+        };
+      }
+
+      function buildAggregateBandStats(relicsPerReroll, rerollsBudget) {
+        var totalTrials = relicsPerReroll * rerollsBudget;
+        var meanBinomial = totalTrials * P;
+        var mean = meanBinomial;
+        var stdDev = Math.sqrt(totalTrials * P * (1 - P));
+        var b0 = mean;
+        var b1 = mean + stdDev;
+        var b2 = mean + 2 * stdDev;
+        var b3 = mean + 3 * stdDev;
+
+        var band1Lower = Math.ceil(b0);
+        var band1Upper = Math.ceil(b1) - 1;
+        var band2Lower = Math.ceil(b1);
+        var band2Upper = Math.ceil(b2) - 1;
+        var band3Lower = Math.ceil(b2);
+        var band3Upper = Math.ceil(b3) - 1;
+        var band4Lower = Math.ceil(b3);
+
+        var maxBandK = Math.max(band1Upper, band2Upper, band3Upper, band4Lower);
+        var method = chooseMethod(totalTrials, 0, maxBandK);
+        var cdf = makeCdf(method, totalTrials, meanBinomial, stdDev);
+
+        var pBand1 = rangeProbability(cdf, band1Lower, band1Upper);
+        var pBand2 = rangeProbability(cdf, band2Lower, band2Upper);
+        var pBand3 = rangeProbability(cdf, band3Lower, band3Upper);
+        var pBand4 = atLeastProbability(cdf, band4Lower);
+
+        return {
+          pBand1: pBand1,
+          pBand2: pBand2,
+          pBand3: pBand3,
+          pBand4: pBand4,
+          band1Lower: band1Lower,
+          band1Upper: band1Upper,
+          band2Lower: band2Lower,
+          band2Upper: band2Upper,
+          band3Lower: band3Lower,
+          band3Upper: band3Upper
+        };
+      }
+
+      function update() {
+        var relicsRaw = relicInput.value.trim();
+        var boughtDivineRaw = boughtDivineInput.value.trim();
+        var targetRaw = targetInput.value.trim();
+        var gemBudgetRaw = gemBudgetInput.value.trim();
+        var desiredSuccessChanceRaw = desiredSuccessChanceInput.value.trim();
+
+        var n = Number(relicsRaw);
+        var b = Number(boughtDivineRaw);
+        var t = Number(targetRaw);
+        var gemBudget = Number(gemBudgetRaw);
+        var desiredSuccessChance = Number(desiredSuccessChanceRaw);
+        var activeOption = getActiveOption();
+
+        var invalid = [];
+        if (!Number.isFinite(n) || n < 0 || Math.floor(n) !== n) {
+          invalid.push("Relics must be a whole number 0 or greater.");
+        }
+        if (activeOption === 1) {
+          if (!Number.isFinite(b) || b < 0 || Math.floor(b) !== b) {
+            invalid.push("Bought divine relics must be a whole number 0 or greater.");
+          }
+          if (!Number.isFinite(t) || t < 0 || Math.floor(t) !== t) {
+            invalid.push("Target rolls must be a whole number 0 or greater.");
+          }
+        } else {
+          if (!Number.isFinite(gemBudget) || gemBudget < 0 || Math.floor(gemBudget) !== gemBudget) {
+            invalid.push("Gem budget must be a whole number 0 or greater.");
+          }
+          if (!Number.isFinite(desiredSuccessChance) || desiredSuccessChance < 0 || desiredSuccessChance > 100) {
+            invalid.push("Desired success chance must be between 0 and 100.");
+          }
+        }
+
+        if (invalid.length > 0) {
+          setText(errorEl, invalid.join(" "));
+          Object.keys(out).forEach(function (k) {
+            if (k.indexOf("mainRow") === 0 || k.indexOf("mainKey") === 0 || k === "method") return;
+            setText(out[k], "-");
+          });
+          setText(out.method, "");
+          return;
+        }
+
+        setText(errorEl, "");
+
+        var boughtForCalc = activeOption === 1 ? b : 0;
+        var solvedTarget = t;
+        var budgetRerolls = null;
+        var desiredSuccessProbability = desiredSuccessChance / 100;
+        var impossibleTarget = false;
+
+        if (activeOption === 2) {
+          budgetRerolls = Math.floor(gemBudget / GEM_COST_PER_REROLL);
+          solvedTarget = solveTargetFromBudget(n, budgetRerolls, desiredSuccessProbability);
+        } else {
+          impossibleTarget = t > (n + b);
+        }
+
+        var stats = buildStats(n, boughtForCalc, solvedTarget);
+        var bandStats = stats;
+        var totalProbabilityWithinBudget = budgetRerolls == null
+          ? null
+          : probabilityWithinRerolls(stats.pTargetOrMore, budgetRerolls);
+
+        if (activeOption === 1) {
+          setText(out.mainKey1, "Chance of target or more");
+          setText(out.mainKey2, "Equivalent odds");
+          setText(out.mainKey3, "Effective target rate");
+          setText(out.mainKey4, "Expected rerolls");
+          setText(out.mainKey5, "Gem cost");
+          showMainRows(true, true, true, true, true, false, false, false);
+          setText(out.bandTitle, "Band Probabilities (One Full Reroll)");
+
+          setText(out.solvedTarget, impossibleTarget ? "Impossible" : formatPercent(stats.pTargetOrMore));
+          setText(out.budgetRerolls, impossibleTarget ? "Impossible" : formatOneIn(stats.pTargetOrMore));
+          setText(out.chancePct, impossibleTarget ? "Impossible" : (Number.isFinite(stats.effectiveRate) ? ("1 / " + withCommas(stats.effectiveRate, 2)) : "No target set"));
+          setText(out.chanceOneIn, impossibleTarget ? "Impossible" : formatExpectedRerollsFromProbability(stats.pTargetOrMore));
+          setText(out.effectiveRate, impossibleTarget ? "Impossible" : formatExpectedGemsFromProbability(stats.pTargetOrMore));
+        } else {
+          setText(out.mainKey1, "Solved target divine rolls");
+          setText(out.mainKey2, "Number of rerolls budgeted");
+          setText(out.mainKey3, "Total probability of hitting target");
+          setText(out.mainKey4, "Probability for each roll");
+          setText(out.mainKey5, "Total equivalent odds");
+          setText(out.mainKey6, "Effective target rate");
+          setText(out.mainKey7, "Total expected rerolls");
+          setText(out.mainKey8, "Total expected cost");
+          showMainRows(true, true, true, true, true, true, true, true);
+          setText(out.bandTitle, "Band Probabilities (Total Across Budget)");
+          bandStats = buildAggregateBandStats(n, budgetRerolls);
+
+          setText(out.solvedTarget, withCommas(solvedTarget, 0));
+          setText(out.budgetRerolls, withCommas(budgetRerolls, 0));
+          setText(out.chancePct, formatPercent(totalProbabilityWithinBudget));
+          setText(out.chanceOneIn, formatPercent(stats.pTargetOrMore));
+          setText(out.effectiveRate, formatOneIn(totalProbabilityWithinBudget));
+          setText(out.expectedRerolls, Number.isFinite(stats.effectiveRate) ? ("1 / " + withCommas(stats.effectiveRate, 2)) : "No target set");
+          setText(out.row7Value, formatExpectedRerollsFromProbability(stats.pTargetOrMore));
+          setText(out.expectedGems, formatExpectedGemsFromProbability(stats.pTargetOrMore));
+        }
+
+        setText(out.mean, withCommas(stats.mean, 6));
+        setText(out.plus1, withCommas(stats.b1, 6));
+        setText(out.plus2, withCommas(stats.b2, 6));
+        setText(out.plus3, withCommas(stats.b3, 6));
+        setText(out.stdDev, withCommas(stats.stdDev, 6));
+
+        setText(out.band1, formatBandProbability(bandStats.pBand1, bandStats.band1Lower, bandStats.band1Upper));
+        setText(out.band2, formatBandProbability(bandStats.pBand2, bandStats.band2Lower, bandStats.band2Upper));
+        setText(out.band3, formatBandProbability(bandStats.pBand3, bandStats.band3Lower, bandStats.band3Upper));
+        setText(out.band4, formatPercent(bandStats.pBand4) + " (" + formatProbability(bandStats.pBand4) + ")");
+
+        var methodLabel = stats.method === "exact-binomial"
+          ? "Method: exact binomial CDF/survival"
+          : stats.method === "poisson"
+            ? "Method: Poisson approximation"
+            : "Method: normal approximation with continuity correction";
+        setText(out.method, methodLabel);
+      }
+
+      option1ModeInput.addEventListener("change", function () {
+        syncOptionCheckboxes(1);
+        update();
+      });
+      option2ModeInput.addEventListener("change", function () {
+        syncOptionCheckboxes(2);
+        update();
+      });
+      relicInput.addEventListener("input", update);
+      boughtDivineInput.addEventListener("input", update);
+      targetInput.addEventListener("input", update);
+      gemBudgetInput.addEventListener("input", update);
+      desiredSuccessChanceInput.addEventListener("input", update);
+      syncOptionCheckboxes(1);
+      update();
+    })();
+  </script>
+</body>
+</html>
