@@ -685,7 +685,7 @@
         var pTargetOrMore = atLeastProbability(cdfBinomial, targetBinomialK);
         var expectedRerolls = pTargetOrMore > 0 ? (1 / pTargetOrMore) : Infinity;
         var expectedGems = Number.isFinite(expectedRerolls) ? Math.round(expectedRerolls * GEM_COST_PER_REROLL) : Infinity;
-        var effectiveRate = targetDivines > 0 ? (n / targetDivines) : Infinity;
+        var effectiveRate = targetDivines > 0 ? (n / (targetDivines - boughtDivines)) : Infinity;
 
         var pBand1 = rangeProbability(cdfBinomial, band1Lower - boughtDivines, band1Upper - boughtDivines);
         var pBand2 = rangeProbability(cdfBinomial, band2Lower - boughtDivines, band2Upper - boughtDivines);
