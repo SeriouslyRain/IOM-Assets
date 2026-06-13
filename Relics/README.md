@@ -11,9 +11,7 @@ A lightweight browser calculator for estimating divine relic reroll odds and gem
 
 ## Usage
 
-Open `index.html` in a browser.
-
-No install or dependencies required.
+Go to Iomassets.org/Relics or Iomassets.org
 
 ## Notes
 

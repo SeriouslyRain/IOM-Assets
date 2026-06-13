@@ -5,6 +5,8 @@
 (function () {
   var STORAGE_KEY = "archaeology_calculator_build_v1";
   var LEGACY_KEY = "archaeology_push_calculator_v1";
+  var STORAGE_CONSENT_KEY = "archaeology_calculator_storage_ok_v1";
+  var OPTIMIZER_RESULTS_KEY = "archaeology_optimizer_results_v1";
 
   var STAT_IDS = [
     "strength",
@@ -21,7 +23,14 @@
     ascension: 0,
     highest_stage: 1,
     has_block_bonker: false,
+    has_avada_keda: false,
+    has_fragment_bundle: false,
+    has_cave_legendary_fish_level_1_tribute: false,
+    mythic_chests_owned: 0,
+    has_axolotl_skin_quest: false,
+    axolotl_skin_quest_level: 1,
     mc_trials: 600,
+    custom_trials_enabled: false,
     abilities: { enrage: true, flurry: true, quake: true },
     stat_levels: {},
     levels: {},
@@ -113,7 +122,14 @@
     state.ascension = 0;
     state.highest_stage = 1;
     state.has_block_bonker = false;
+    state.has_avada_keda = false;
+    state.has_fragment_bundle = false;
+    state.has_cave_legendary_fish_level_1_tribute = false;
+    state.mythic_chests_owned = 0;
+    state.has_axolotl_skin_quest = false;
+    state.axolotl_skin_quest_level = 1;
     state.mc_trials = 600;
+    state.custom_trials_enabled = false;
     state.abilities = { enrage: true, flurry: true, quake: true };
     state.stat_levels = {};
     state.levels = {};
@@ -142,8 +158,34 @@
     if (typeof parsed.mc_trials === "number" && parsed.mc_trials >= 1) {
       state.mc_trials = Math.floor(parsed.mc_trials);
     }
+    if (typeof parsed.custom_trials_enabled === "boolean") {
+      state.custom_trials_enabled = parsed.custom_trials_enabled;
+    }
     if (typeof parsed.has_block_bonker === "boolean") {
       state.has_block_bonker = parsed.has_block_bonker;
+    }
+    if (typeof parsed.has_avada_keda === "boolean") {
+      state.has_avada_keda = parsed.has_avada_keda;
+    }
+    if (typeof parsed.has_fragment_bundle === "boolean") {
+      state.has_fragment_bundle = parsed.has_fragment_bundle;
+    }
+    if (typeof parsed.has_cave_legendary_fish_level_1_tribute === "boolean") {
+      state.has_cave_legendary_fish_level_1_tribute =
+        parsed.has_cave_legendary_fish_level_1_tribute;
+    }
+    if (typeof parsed.has_axolotl_skin_quest === "boolean") {
+      state.has_axolotl_skin_quest = parsed.has_axolotl_skin_quest;
+    }
+    if (typeof parsed.mythic_chests_owned === "number" && parsed.mythic_chests_owned >= 0) {
+      state.mythic_chests_owned = Math.floor(parsed.mythic_chests_owned);
+    }
+    if (typeof parsed.axolotl_skin_quest_level === "number" && parsed.axolotl_skin_quest_level >= 1) {
+      state.axolotl_skin_quest_level = Math.floor(parsed.axolotl_skin_quest_level);
+    }
+    if (typeof parsed.axolotl_skin_quest_rank === "number" && parsed.axolotl_skin_quest_rank >= 0) {
+      state.axolotl_skin_quest_level = Math.floor(parsed.axolotl_skin_quest_rank) + 1;
+      state.has_axolotl_skin_quest = true;
     }
     if (parsed.abilities && typeof parsed.abilities === "object") {
       if (typeof parsed.abilities.enrage === "boolean") {
@@ -245,7 +287,15 @@
       ascension: state.ascension,
       highest_stage: state.highest_stage,
       has_block_bonker: state.has_block_bonker,
+      has_avada_keda: state.has_avada_keda,
+      has_fragment_bundle: state.has_fragment_bundle,
+      has_cave_legendary_fish_level_1_tribute:
+        state.has_cave_legendary_fish_level_1_tribute,
+      mythic_chests_owned: state.mythic_chests_owned,
+      has_axolotl_skin_quest: state.has_axolotl_skin_quest,
+      axolotl_skin_quest_level: state.axolotl_skin_quest_level,
       mc_trials: state.mc_trials,
+      custom_trials_enabled: state.custom_trials_enabled,
       abilities: Object.assign({}, state.abilities),
       stat_levels: Object.assign({}, state.stat_levels),
       levels: Object.assign({}, state.levels),
@@ -259,11 +309,44 @@
   function updateSaveStatus(message) {
     if (!saveStatusEl) saveStatusEl = document.getElementById("build-save-status");
     if (saveStatusEl) saveStatusEl.textContent = message;
+    refreshStorageButton();
+  }
+
+  function storageConsent() {
+    try {
+      return localStorage.getItem(STORAGE_CONSENT_KEY) || "";
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function canPersist() {
+    return storageConsent() === "accepted";
+  }
+
+  function refreshStorageButton() {
+    var btn = document.getElementById("btn-enable-storage");
+    if (btn) btn.classList.toggle("hidden", canPersist());
+  }
+
+  function setStorageConsent(choice) {
+    try {
+      localStorage.setItem(STORAGE_CONSENT_KEY, choice);
+      refreshStorageButton();
+      return true;
+    } catch (err) {
+      updateSaveStatus("Browser storage is blocked, so this build cannot be saved here.");
+      return false;
+    }
   }
 
   function saveState() {
     if (!bootComplete) return;
     syncFromDom();
+    if (!canPersist()) {
+      updateSaveStatus("Inputs are kept for this tab. Allow browser saving to keep them next time.");
+      return false;
+    }
     try {
       var payload = buildSnapshotForDisk();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -276,7 +359,56 @@
     } catch (err) {
       console.warn("Could not save archaeology build:", err);
       updateSaveStatus("Could not auto-save (storage full or blocked). Export your build to a file.");
+      return false;
     }
+    return true;
+  }
+
+  function readOptimizerResults() {
+    try {
+      var raw = localStorage.getItem(OPTIMIZER_RESULTS_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function writeOptimizerResults(results) {
+    if (!canPersist()) return false;
+    try {
+      localStorage.setItem(
+        OPTIMIZER_RESULTS_KEY,
+        JSON.stringify((results || []).slice(0, 24)),
+      );
+      return true;
+    } catch (err) {
+      updateSaveStatus("Could not save optimizer results (storage full or blocked).");
+      return false;
+    }
+  }
+
+  function saveOptimizerResult(entry) {
+    if (!entry || typeof entry !== "object" || !canPersist()) return false;
+    var results = readOptimizerResults();
+    results = results.filter(function (r) {
+      return r && r.id !== entry.id;
+    });
+    results.unshift(entry);
+    return writeOptimizerResults(results);
+  }
+
+  function deleteOptimizerResult(id) {
+    var results = readOptimizerResults().filter(function (r) {
+      return r && r.id !== id;
+    });
+    return writeOptimizerResults(results);
+  }
+
+  function getOptimizerResult(id) {
+    return readOptimizerResults().find(function (r) {
+      return r && r.id === id;
+    }) || null;
   }
 
   function exportBuildToFile() {
@@ -301,7 +433,11 @@
     applyUpgradeLockStates();
     applyBudgetLine();
     document.dispatchEvent(new CustomEvent("archaeology-build-change"));
-    updateSaveStatus("Build imported and saved in this browser.");
+    updateSaveStatus(
+      canPersist()
+        ? "Build imported and saved in this browser."
+        : "Build imported for this tab. Allow browser saving to keep it next time.",
+    );
   }
 
   function wireImportExport() {
@@ -356,8 +492,22 @@
     if (el) el.value = String(state.highest_stage);
     el = document.getElementById("mc-trials");
     if (el) el.value = String(state.mc_trials);
+    el = document.getElementById("advanced-trials-toggle");
+    if (el) el.checked = !!state.custom_trials_enabled;
     el = document.getElementById("bonker");
     if (el) el.checked = !!state.has_block_bonker;
+    el = document.getElementById("avada-keda");
+    if (el) el.checked = !!state.has_avada_keda;
+    el = document.getElementById("fragment-bundle");
+    if (el) el.checked = !!state.has_fragment_bundle;
+    el = document.getElementById("cave-tribute");
+    if (el) el.checked = !!state.has_cave_legendary_fish_level_1_tribute;
+    el = document.getElementById("mythic-chests-owned");
+    if (el) el.value = String(state.mythic_chests_owned || 0);
+    el = document.getElementById("axolotl-quest");
+    if (el) el.checked = !!state.has_axolotl_skin_quest;
+    el = document.getElementById("axolotl-quest-level");
+    if (el) el.value = String(state.axolotl_skin_quest_level || 1);
     el = document.getElementById("ability-enrage");
     if (el) el.checked = state.abilities.enrage !== false;
     el = document.getElementById("ability-flurry");
@@ -396,8 +546,28 @@
       var mc = parseInt(el.value, 10);
       state.mc_trials = Number.isFinite(mc) && mc >= 1 ? mc : 600;
     }
+    el = document.getElementById("advanced-trials-toggle");
+    if (el) state.custom_trials_enabled = !!el.checked;
     el = document.getElementById("bonker");
     if (el) state.has_block_bonker = !!el.checked;
+    el = document.getElementById("avada-keda");
+    if (el) state.has_avada_keda = !!el.checked;
+    el = document.getElementById("fragment-bundle");
+    if (el) state.has_fragment_bundle = !!el.checked;
+    el = document.getElementById("cave-tribute");
+    if (el) state.has_cave_legendary_fish_level_1_tribute = !!el.checked;
+    el = document.getElementById("mythic-chests-owned");
+    if (el) {
+      var chests = parseInt(el.value, 10);
+      state.mythic_chests_owned = Number.isFinite(chests) && chests >= 0 ? chests : 0;
+    }
+    el = document.getElementById("axolotl-quest");
+    if (el) state.has_axolotl_skin_quest = !!el.checked;
+    el = document.getElementById("axolotl-quest-level");
+    if (el) {
+      var axo = parseInt(el.value, 10);
+      state.axolotl_skin_quest_level = Number.isFinite(axo) && axo >= 1 ? axo : 1;
+    }
     el = document.getElementById("ability-enrage");
     if (el) state.abilities.enrage = !!el.checked;
     el = document.getElementById("ability-flurry");
@@ -506,6 +676,35 @@
     });
   }
 
+  function wireCheckbox(id, stateKey) {
+    var box = document.getElementById(id);
+    if (!box || box.dataset.storeWired === "1") return;
+    box.dataset.storeWired = "1";
+    box.addEventListener("change", function () {
+      state[stateKey] = !!box.checked;
+      saveState();
+      document.dispatchEvent(new CustomEvent("archaeology-build-change"));
+    });
+  }
+
+  function wireExternalUnlocks() {
+    wireCheckbox("avada-keda", "has_avada_keda");
+    wireCheckbox("fragment-bundle", "has_fragment_bundle");
+    wireCheckbox(
+      "cave-tribute",
+      "has_cave_legendary_fish_level_1_tribute",
+    );
+    wireCheckbox("axolotl-quest", "has_axolotl_skin_quest");
+    var chests = document.getElementById("mythic-chests-owned");
+    wireNumericInput(chests, function (v) {
+      state.mythic_chests_owned = v;
+    });
+    var axo = document.getElementById("axolotl-quest-level");
+    wireNumericInput(axo, function (v) {
+      state.axolotl_skin_quest_level = Math.max(1, v || 1);
+    });
+  }
+
   function wireAbility(id, key) {
     var box = document.getElementById(id);
     if (!box || box.dataset.storeWired === "1") return;
@@ -523,12 +722,65 @@
     wireAbility("ability-quake", "quake");
   }
 
+  function wireTrialToggle() {
+    var box = document.getElementById("advanced-trials-toggle");
+    if (!box || box.dataset.storeWired === "1") return;
+    box.dataset.storeWired = "1";
+    box.addEventListener("change", function () {
+      state.custom_trials_enabled = !!box.checked;
+      saveState();
+      document.dispatchEvent(new CustomEvent("archaeology-build-change"));
+    });
+  }
+
+  function hideStorageConsent() {
+    var prompt = document.getElementById("storage-consent");
+    if (prompt) prompt.classList.add("hidden");
+  }
+
+  function showStorageConsentIfNeeded() {
+    var prompt = document.getElementById("storage-consent");
+    if (!prompt || storageConsent()) return;
+    prompt.classList.remove("hidden");
+  }
+
+  function wireStorageConsent() {
+    var accept = document.getElementById("btn-storage-accept");
+    var decline = document.getElementById("btn-storage-decline");
+    var enable = document.getElementById("btn-enable-storage");
+    var acceptStorage = function () {
+      if (setStorageConsent("accepted")) {
+        hideStorageConsent();
+        saveState();
+        document.dispatchEvent(new CustomEvent("archaeology-build-change"));
+      }
+    };
+    if (accept && accept.dataset.storeWired !== "1") {
+      accept.dataset.storeWired = "1";
+      accept.addEventListener("click", acceptStorage);
+    }
+    if (decline && decline.dataset.storeWired !== "1") {
+      decline.dataset.storeWired = "1";
+      decline.addEventListener("click", function () {
+        setStorageConsent("declined");
+        hideStorageConsent();
+        updateSaveStatus("Inputs are not saved on this browser. Use Export if you want a copy.");
+      });
+    }
+    if (enable && enable.dataset.storeWired !== "1") {
+      enable.dataset.storeWired = "1";
+      enable.addEventListener("click", acceptStorage);
+    }
+  }
+
   function wireAll() {
     wireScalar("arch-level", "archaeology_level");
     wireScalar("ascension", "ascension");
     wireScalar("highest-stage", "highest_stage");
     wireScalar("mc-trials", "mc_trials");
+    wireTrialToggle();
     wireBonker();
+    wireExternalUnlocks();
     wireAbilities();
     wireUpgradeInputs();
     wireStatInputs();
@@ -543,7 +795,13 @@
     applyUpgradeLockStates();
     applyBudgetLine();
     bootComplete = true;
-    saveState();
+    wireStorageConsent();
+    if (canPersist()) {
+      saveState();
+    } else {
+      updateSaveStatus("Inputs are kept for this tab. Allow browser saving to keep them next time.");
+      showStorageConsentIfNeeded();
+    }
     setTimeout(function () {
       document.dispatchEvent(new CustomEvent("archaeology-build-change"));
     }, 0);
@@ -571,7 +829,15 @@
         ascension: state.ascension,
         highest_stage: state.highest_stage,
         has_block_bonker: state.has_block_bonker,
+        has_avada_keda: state.has_avada_keda,
+        has_fragment_bundle: state.has_fragment_bundle,
+        has_cave_legendary_fish_level_1_tribute:
+          state.has_cave_legendary_fish_level_1_tribute,
+        mythic_chests_owned: state.mythic_chests_owned,
+        has_axolotl_skin_quest: state.has_axolotl_skin_quest,
+        axolotl_skin_quest_level: state.axolotl_skin_quest_level,
         mc_trials: state.mc_trials,
+        custom_trials_enabled: state.custom_trials_enabled,
         abilities: Object.assign({}, state.abilities),
         stat_levels: Object.assign({}, state.stat_levels),
         levels: Object.assign({}, state.levels),
@@ -584,6 +850,12 @@
     exportBuildToFile: exportBuildToFile,
     importBuildFromObject: importBuildFromObject,
     applySnapshot: applySnapshot,
+    canPersist: canPersist,
+    storageConsent: storageConsent,
+    saveOptimizerResult: saveOptimizerResult,
+    readOptimizerResults: readOptimizerResults,
+    deleteOptimizerResult: deleteOptimizerResult,
+    getOptimizerResult: getOptimizerResult,
   };
 
   function levelsByTier() {

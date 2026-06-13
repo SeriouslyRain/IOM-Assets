@@ -200,6 +200,18 @@
       },
       "_speed_mod_clarification": "Base speed mod +10 hits at 2× attack speed; total hits from upgrades (see block_modifiers). Bonker +15 hits and +15 duration."
     },
+    "avada_keda": {
+      "player_state_flag": "has_avada_keda",
+      "source": "Avada Keda",
+      "effects_when_owned": {
+        "ability_duration_extra_hits": 5,
+        "flurry_stamina_on_cast_extra": 5,
+        "flurry_speed_duration_extra_hits": 5,
+        "all_ability_cooldown_attacks": -10,
+        "ability_instacharge_chance": 0.03
+      },
+      "_note": "Duration bonus applies to Enrage and Quake. Avada adds +5 Flurry stamina and extends Flurry's attack-speed buff from 5 to 10 hits before Flurry upgrades. Instacharge rolls on ability use and immediately repeats that same ability's activation."
+    },
     "fragment_bundle_iap": {
       "player_state_flag": "has_fragment_bundle",
       "source": "real_money_bundle",
@@ -216,14 +228,13 @@
       "example": "4 chests → +1% from this source → ×1.01 on total fragment gain"
     },
     "axolotl_skin_quest": {
-      "player_state_flag": "axolotl_skin_quest_rank",
+      "player_state_flag": "has_axolotl_skin_quest",
+      "player_state_count": "axolotl_skin_quest_level",
       "source": "Axolotl skin quest",
-      "fragment_gain_percent_per_rank": 0.03,
-      "rank_starts_at": 0,
-      "rank_0_has_bonus": true,
+      "fragment_gain_percent_per_level": 0.03,
       "within_source_stacking": "additive",
-      "formula": "1 + 0.03 * (rank + 1)",
-      "example": "rank 0 → +3% (×1.03); rank 2 → +9% from this source (×1.09)"
+      "formula": "1 + 0.03 * axolotl_skin_quest_level",
+      "example": "level 1 → +3% (×1.03); level 2 → +6% from this source (×1.06)"
     }
   },
 
@@ -607,10 +618,13 @@
 
   "crosshairs": {
     "red": {
-      "_note": "Normal crosses; manual tap for bonus damage on that block."
+      "spawn_chance": 0.021746356675002753,
+      "damage_multiplier": 1,
+      "_note": "Normal crosses; manual tap for bonus damage on that block. Spawn chance is rolled once per living block on a true ~1s timer, independent of attack count. Empirical estimate from manual 15-minute recording fit: 2.175% per living block per check."
     },
     "golden": {
       "source": "luck.golden_crosshair_chance",
+      "damage_multiplier": 3,
       "stronger_than_red": true,
       "optimization_priority": "low_idle_assumption",
       "future": "skill may auto-tap golden crosses"
@@ -895,11 +909,10 @@
           "unlock_stage": 32,
           "per_level": {
             "ability_instacharge_chance": 0.003,
-            "max_stamina_per_hit": 4
+            "max_stamina": 4
           },
           "cap": 20,
-          "base_cost": 20,
-          "_uncertain": "max_stamina +4 assumed per hit; not yet confirmed in-game"
+          "base_cost": 20
         },
         {
           "id": "exp_gain_2x_stat_caps",

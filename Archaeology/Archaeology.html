@@ -416,6 +416,89 @@
       font-size: 0.92rem;
     }
     .checkbox-row input { width: auto; }
+    .external-unlocks {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 16px;
+      margin-top: 8px;
+    }
+    .inline-number {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+    .inline-number input {
+      width: 4.8rem;
+      padding: 6px 8px;
+    }
+    .manual-push-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 7px 0;
+    }
+    .optimizer-settings {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .optimizer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+      align-items: start;
+    }
+    .optimizer-panel {
+      min-width: 0;
+    }
+    .trial-controls.disabled {
+      opacity: 0.55;
+    }
+    .trial-controls.disabled button,
+    .trial-controls.disabled input {
+      cursor: not-allowed;
+    }
+    .saved-build-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .saved-build-select {
+      width: 100%;
+      min-height: 38px;
+      background: #141925;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+    }
+    .storage-consent {
+      position: fixed;
+      inset: auto 16px 16px auto;
+      z-index: 50;
+      width: min(420px, calc(100vw - 32px));
+      background: #171a21;
+      border: 1px solid rgba(120, 166, 255, 0.55);
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+    }
+    .storage-consent h2 {
+      margin-bottom: 6px;
+    }
+    .storage-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
     .cards-section { margin-top: 14px; }
     .cards-section h3 { margin-bottom: 6px; }
     .cards-note { color: var(--muted); font-size: 0.88rem; margin: 0 0 8px; }
@@ -486,6 +569,107 @@
       border-radius: 8px;
       background: rgba(255, 138, 138, 0.08);
     }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    .cards-table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        margin: 12px auto;
+        padding: 0 10px 32px;
+      }
+      .card { padding: 12px; }
+      h1 { font-size: 1.2rem; }
+      .grid { grid-template-columns: 1fr; }
+      .upgrade-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .lvl-controls {
+        flex-wrap: wrap;
+        width: 100%;
+      }
+      .btn-step {
+        min-width: 2.5rem;
+        min-height: 2.75rem;
+      }
+      .input-block input.lvl,
+      .input-block input.scalar,
+      .lvl-controls .lvl,
+      .lvl-controls .scalar {
+        width: 4.5rem;
+        font-size: 16px;
+        min-height: 44px;
+      }
+      input, select, .card-select {
+        font-size: 16px;
+      }
+      .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .controls-row .btn {
+        width: 100%;
+        min-height: 44px;
+      }
+      #statInputs {
+        width: 100%;
+        max-width: 100%;
+      }
+      .stat-slot .upgrade-top {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .stat-slot .lvl-controls {
+        justify-self: stretch;
+      }
+      .results-metrics {
+        gap: 12px;
+      }
+      .metric strong { font-size: 1.15rem; }
+      .fragment-choices {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .fragment-choice {
+        width: 100%;
+      }
+      .optimizer-settings,
+      .optimizer-grid {
+        grid-template-columns: 1fr;
+      }
+      .saved-build-controls .btn,
+      .storage-actions .btn {
+        width: 100%;
+        min-height: 44px;
+      }
+      .storage-consent {
+        inset: auto 10px 10px 10px;
+        width: auto;
+      }
+      #block-cards-grid {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+      }
+      .cards-table {
+        min-width: 320px;
+      }
+      .hist-pre {
+        font-size: 0.75rem;
+        overflow-x: auto;
+      }
+    }
     .recommended-box {
       margin-top: 12px;
       padding: 12px;
@@ -499,17 +683,27 @@
   <main class="wrap">
     <header>
       <h1>Archaeology Calculator</h1>
-      <p class="sub">Your build auto-saves in this browser (stats, upgrades, level, settings). Use <strong>Export build</strong> to keep a file copy when testing code changes or moving folders. Works as a file or on a website — include <code>js/archaeology-bundle.js</code> and <code>js/mc-worker.js</code>.</p>
+      <p class="sub">Set up your archaeology build, preview runs, and compare stat allocations. You can save inputs on this browser or export a build file for another device.</p>
     </header>
 
     <p id="load-error" class="hidden"></p>
 
+    <section id="storage-consent" class="storage-consent hidden" aria-live="polite">
+      <h2>Save inputs on this browser?</h2>
+      <p class="note">The calculator can remember your build and optimizer results here, so you do not have to enter everything again. It uses local browser storage only; nothing is sent anywhere and no tracking cookies are used.</p>
+      <div class="storage-actions">
+        <button type="button" class="btn" id="btn-storage-decline">Not now</button>
+        <button type="button" class="btn btn-primary" id="btn-storage-accept">Save my inputs</button>
+      </div>
+    </section>
+
     <section class="card" id="section-build">
       <h2>Your build</h2>
-      <p id="build-save-status" class="note">Build auto-saves in this browser when you change any value.</p>
+      <p id="build-save-status" class="note">Inputs are kept for this tab until browser saving is enabled.</p>
       <div class="controls-row">
         <button type="button" class="btn" id="btn-export-build">Export build (.json)</button>
         <button type="button" class="btn" id="btn-import-build">Import build…</button>
+        <button type="button" class="btn" id="btn-enable-storage">Enable browser saving</button>
         <input type="file" id="import-build-file" accept=".json,application/json" hidden />
       </div>
 
@@ -533,8 +727,17 @@
         Block Bonker owned
       </label>
 
+      <div class="external-unlocks">
+        <label class="checkbox-inline"><input type="checkbox" id="avada-keda" /> Avada Keda</label>
+        <label class="checkbox-inline"><input type="checkbox" id="fragment-bundle" /> Archaeology Bundle</label>
+        <label class="checkbox-inline"><input type="checkbox" id="cave-tribute" /> Cave Legendary Fish Tribute 1</label>
+        <label class="inline-number" for="mythic-chests-owned">Mythic chests <input id="mythic-chests-owned" type="number" min="0" step="1" value="0" /></label>
+        <label class="checkbox-inline"><input type="checkbox" id="axolotl-quest" /> Axolotl Skin Quest</label>
+        <label class="inline-number" for="axolotl-quest-level">Level <input id="axolotl-quest-level" type="number" min="1" step="1" value="1" /></label>
+      </div>
+
       <div class="abilities-row">
-        <span class="abilities-label">Use in sim:</span>
+        <span class="abilities-label">Use abilities:</span>
         <label class="checkbox-inline"><input type="checkbox" id="ability-enrage" checked /> Enrage</label>
         <label class="checkbox-inline"><input type="checkbox" id="ability-flurry" checked /> Flurry</label>
         <label class="checkbox-inline"><input type="checkbox" id="ability-quake" checked /> Quake</label>
@@ -1154,7 +1357,7 @@
           <div class="upgrade" data-tier="mythic" data-upgrade-id="instacharge_max_stamina_per_hit" data-unlock-stage="32" data-cap="20">
             <div class="upgrade-top">
               <div class="benefit-list">
-                <span class="benefit-line">+0.3% instacharge, +4 max stam/hit</span>
+                <span class="benefit-line">+0.3% instacharge, +4 max stamina</span>
                 <div class="meta">Cap: 20</div>
               </div>
               <div class="lvl-controls">
@@ -1186,67 +1389,100 @@
       </div>
     </section>
 
-    <section class="card tool-panel" id="section-push">
-      <h2>Push optimizer</h2>
-      <p class="sub">Uses upgrades and settings from <strong>Your build</strong>. Screens many stat layouts, refines the best, then confirms at full MC trials. Optimizer runs MC in parallel via <code>js/mc-worker.js</code> (uses several CPU cores).</p>
+    <section class="card tool-panel" id="section-optimizers">
+      <h2>Optimizers</h2>
+      <p class="sub">All optimizers use the build above. They run repeated simulated attempts, so more trials are steadier but slower.</p>
 
-      <div class="controls-row">
-        <div class="input-block">
-          <label for="mc-trials">MC trials</label>
-          <input id="mc-trials" class="scalar" type="number" min="100" max="20000" step="100" value="600" />
+      <div class="optimizer-settings">
+        <div class="panel">
+          <h3>Run settings</h3>
+          <label class="checkbox-row" for="advanced-trials-toggle">
+            <input type="checkbox" id="advanced-trials-toggle" />
+            Use a custom trial count
+          </label>
+          <div class="controls-row trial-controls" id="trial-controls-row">
+            <div class="input-block">
+              <label for="mc-trials">Trials per final check</label>
+              <input id="mc-trials" class="scalar" type="number" min="100" max="20000" step="10" value="600" />
+            </div>
+          </div>
+          <p class="note">Default is 600. Lower values finish faster but bounce around more; higher values are steadier but take longer.</p>
         </div>
-        <button type="button" class="btn" id="btn-preview">Preview your stats</button>
-        <button type="button" class="btn btn-primary" id="btn-optimize">Optimize stats</button>
-      </div>
 
-      <div id="recommended-stats" class="recommended-box hidden">
-        <h3>Recommended stat allocation</h3>
-        <p class="note">Does not change your inputs until you apply.</p>
-        <div id="recommended-stats-body"></div>
-        <button type="button" class="btn btn-primary" id="btn-apply-stats" style="margin-top:10px" disabled>Apply to stat inputs above</button>
-      </div>
-
-      <div class="panel" style="margin-top:12px">
-        <h3>Results</h3>
-        <div id="push-results-inner">
-          <p class="note">Preview your current stats, or optimize to see results for recommended stats.</p>
-        </div>
-      </div>
-
-      <p id="push-status" class="push-status"></p>
-      <p class="note">Push sim: per-slot spawns, spawn-order targeting, rolled crits (incl. super/ultra), block cards, Enrage / Flurry / Quake, partial floors. No block speed mods.</p>
-    </section>
-
-    <section class="card tool-panel" id="section-xp">
-      <h2>XP optimizer</h2>
-      <p class="sub">Uses the same build and <strong>MC trials</strong> as push. Screens many stat layouts with quick MC, refines the best, then confirms at full trials (good when budget ≪ sum of caps). MC screening uses parallel workers like push.</p>
-
-      <div class="controls-row">
-        <button type="button" class="btn" id="btn-xp-preview">Preview XP/hr (your stats)</button>
-        <button type="button" class="btn btn-primary" id="btn-xp-optimize">Optimize stats for XP</button>
-      </div>
-
-      <div id="recommended-stats-xp" class="recommended-box hidden">
-        <h3>Recommended stat allocation (XP)</h3>
-        <p class="note">Does not change your inputs until you apply.</p>
-        <div id="recommended-stats-xp-body"></div>
-        <button type="button" class="btn btn-primary" id="btn-apply-stats-xp" style="margin-top:10px" disabled>Apply to stat inputs above</button>
-      </div>
-
-      <div class="panel" style="margin-top:12px">
-        <h3>XP results</h3>
-        <div id="xp-results-inner">
-          <p class="note">Preview your current stats, or optimize to see results for recommended stats.</p>
+        <div class="panel saved-builds">
+          <h3>Saved optimizer builds</h3>
+          <select id="saved-optimizer-select" class="saved-build-select" aria-label="Saved optimizer builds">
+            <option value="">No saved optimizer builds yet</option>
+          </select>
+          <div class="saved-build-controls">
+            <button type="button" class="btn" id="btn-load-saved-stats" disabled>Apply stats</button>
+            <button type="button" class="btn" id="btn-load-saved-build" disabled>Load build</button>
+            <button type="button" class="btn" id="btn-delete-saved-build" disabled>Delete</button>
+          </div>
+          <p class="note" id="saved-optimizer-note">Optimizer results are saved here after a run once browser saving is enabled.</p>
         </div>
       </div>
 
-      <p id="xp-status" class="push-status"></p>
-      <p class="note">XP sim: rolled crits, block cards (tier + dirt), deterministic block mods, flurry speed + stamina, enrage/quake cleave rolls, partial floors. Results show <strong>E[XP/hr]</strong> (mean of per-run rates) and <strong>ratio÷means</strong> (sum XP ÷ sum time — cross-tool compare). Crosshairs / one-hit not simulated.</p>
-    </section>
+      <div class="optimizer-grid">
+        <section class="panel optimizer-panel" id="section-push">
+          <h2>Push optimizer</h2>
+          <p class="sub">Finds stat layouts that push farther. Manual push is slower because it also models saved cooldowns, deliberate ability timing, and tapped crosshairs.</p>
 
-    <section class="card tool-panel" id="section-fragment">
-      <h2>Fragment optimizer</h2>
-      <p class="sub">Optimize stat allocation for <strong>E[fragments/hour]</strong> of a chosen currency. Uses the same build and <strong>MC trials</strong> as push. Sim starts at stage 1 each run (depth + PER + loot mods matter).</p>
+          <div class="controls-row">
+            <button type="button" class="btn" id="btn-preview">Preview auto push</button>
+            <button type="button" class="btn btn-primary" id="btn-optimize">Optimize auto push</button>
+            <button type="button" class="btn" id="btn-preview-manual">Preview manual push</button>
+            <button type="button" class="btn btn-primary" id="btn-optimize-manual">Optimize manual push</button>
+          </div>
+
+          <div id="recommended-stats" class="recommended-box hidden">
+            <h3>Recommended stat allocation</h3>
+            <p class="note">Does not change your inputs until you apply.</p>
+            <div id="recommended-stats-body"></div>
+            <button type="button" class="btn btn-primary" id="btn-apply-stats" style="margin-top:10px" disabled>Apply to stat inputs above</button>
+          </div>
+
+          <div class="panel" style="margin-top:12px">
+            <h3>Results</h3>
+            <div id="push-results-inner">
+              <p class="note">Preview your current stats, or optimize to see a recommended allocation.</p>
+            </div>
+          </div>
+
+          <p id="push-status" class="push-status"></p>
+          <p class="note">Auto push assumes the game handles abilities and auto crosshairs. Manual push starts abilities ready, taps crosshairs, and uses a simple timing plan. Manual optimization can take several times longer.</p>
+        </section>
+
+        <section class="panel optimizer-panel" id="section-xp">
+          <h2>XP optimizer</h2>
+          <p class="sub">Finds stat layouts for XP per hour using the same trial setting above.</p>
+
+          <div class="controls-row">
+            <button type="button" class="btn" id="btn-xp-preview">Preview XP/hr</button>
+            <button type="button" class="btn btn-primary" id="btn-xp-optimize">Optimize XP</button>
+          </div>
+
+          <div id="recommended-stats-xp" class="recommended-box hidden">
+            <h3>Recommended stat allocation (XP)</h3>
+            <p class="note">Does not change your inputs until you apply.</p>
+            <div id="recommended-stats-xp-body"></div>
+            <button type="button" class="btn btn-primary" id="btn-apply-stats-xp" style="margin-top:10px" disabled>Apply to stat inputs above</button>
+          </div>
+
+          <div class="panel" style="margin-top:12px">
+            <h3>XP results</h3>
+            <div id="xp-results-inner">
+              <p class="note">Preview your current stats, or optimize to see a recommended allocation.</p>
+            </div>
+          </div>
+
+          <p id="xp-status" class="push-status"></p>
+          <p class="note">XP runs include crits, cards, block modifiers, abilities, instacharge, auto crosshairs, and partial floors.</p>
+        </section>
+
+        <section class="panel optimizer-panel" id="section-fragment">
+          <h2>Fragment optimizer</h2>
+          <p class="sub">Finds stat layouts for fragments per hour. Pick the fragment first; depth, Perception, and loot modifiers all matter.</p>
 
       <div class="fragment-target-row">
         <span class="fragment-target-label">Target fragment</span>
@@ -1273,13 +1509,15 @@
         </div>
       </div>
 
-      <p id="fragment-status" class="push-status"></p>
-      <p class="note">Fragment sim: rolled crits, block cards, exp/speed/stamina/loot mods, flurry speed, enrage/quake, partial floors. Only the selected currency is scored; other families still affect clear speed.</p>
+          <p id="fragment-status" class="push-status"></p>
+          <p class="note">Fragment runs score only the selected currency. Other block types still matter because they affect how fast the run reaches later stages.</p>
+        </section>
+      </div>
     </section>
   </main>
 
   <script src="js/build-store.js"></script>
-  <script src="js/archaeology-bundle.js?v=34"></script>
+  <script src="js/archaeology-bundle.js?v=48"></script>
   <script>
     (function () {
       function showBootError(msg) {
@@ -1298,7 +1536,7 @@
         return function () {
           if (typeof window[fnName] === "function") return;
           showBootError(
-            "Calculator script did not load. Ensure js/archaeology-bundle.js is next to index.html (F12 → Console for 404 errors).",
+            "Calculator script did not load. Ensure js/archaeology-bundle.js is in the js folder next to this page (F12 → Console for 404 errors).",
           );
         };
       }
