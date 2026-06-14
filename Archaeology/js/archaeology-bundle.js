@@ -870,10 +870,14 @@ function rollCrosshairDamage(
   );
 }
 
-/** Quake splash: % of raw damage, ignores armor; each target rolls crit independently. */
-function rollQuakeCleaveDamage(rng, combat, rt) {
+/** Quake splash: % of Enrage-adjusted raw damage, ignores armor; each target rolls crit independently. */
+function rollQuakeCleaveDamage(rng, combat, rt, enrageActive = false) {
   const pct = rt?.quake?.cleavePercent ?? 0.2;
-  const base = Math.max(1, Math.floor(integerRawDamage(combat) * pct));
+  let raw = integerRawDamage(combat);
+  if (enrageActive && rt?.enrage?.enabled) {
+    raw = Math.max(1, Math.floor(raw * (1 + (rt.enrage.damagePercent ?? 0))));
+  }
+  const base = Math.max(1, Math.floor(raw * pct));
   const critMult = rollCritMultiplier(rng, combat, false, rt);
   return Math.max(1, Math.floor(base * critMult));
 }
@@ -2059,9 +2063,10 @@ function applyCrosshairTimerTicks(run, combat, rt, ab, rng, timer, from, to) {
 
 function applyQuakeCleave(run, target, combat, rt, ab, rng) {
   if (!ab.quake.active || !rt.quake.enabled || ab.quake.charges <= 0) return;
+  const enrageOn = ab.enrage.active && rt.enrage.enabled;
   for (const b of run.blocks) {
     if (b === target || b.remainingHp <= 0) continue;
-    damageBlock(run, b, rollQuakeCleaveDamage(rng, combat, rt));
+    damageBlock(run, b, rollQuakeCleaveDamage(rng, combat, rt, enrageOn));
   }
   ab.quake.charges--;
   if (ab.quake.charges <= 0) {
